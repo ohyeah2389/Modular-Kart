@@ -26,13 +26,13 @@ function thermal.update(dt)
     -- Apply jet needle adjustments
     local lowSpeedRichness = (state.engine.lowSpeedJet / 4) ^ 0.1
     local highSpeedRichness = (state.engine.highSpeedJet / 4) ^ 0.1
-    local richnessFactor = lowSpeedRichness + (highSpeedRichness - lowSpeedRichness) * jettingRPMFactor
+    local richnessFactor = lowSpeedRichness + (highSpeedRichness - lowSpeedRichness) * jettingRPMFactor -- linear interp
     
     -- Calculate final AFR
     state.thermal.airFuelRatio = airFuelRatioBase / richnessFactor
 
     -- Calculate AFR effect on heat generation
-    local afrHeatEffect = helpers.mapRange(helpers.normalDistributionCDF(state.thermal.airFuelRatio, 14.7, 3), 0, 1, 0.35, 1.2, true)
+    local afrHeatEffect = helpers.mapRange(helpers.normalDistributionCDF(state.thermal.airFuelRatio, 14.7, 3), 0, 1, 0.35, 1.0, true)
     state.thermal.afrDetuneEffect = helpers.normalDistributionPDF(state.thermal.airFuelRatio, 14.7, 3)
 
     ac.debug("richnessFactor", richnessFactor)

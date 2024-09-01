@@ -29,7 +29,7 @@ local config = {
             idle = {
                 startRPM = 300;
                 endRPM = 3000;
-                position = 0.4;
+                position = 0.46;
             }
         };
         thermal = {
@@ -69,7 +69,7 @@ local config = {
                 combustionHeatingCoef = 1.2;
                 frictionHeatingCoef = 0.3;
                 airCoolingCoef = 0.03;
-                emissivity = 0.6; -- Emissivity of aluminum (oxidized)
+                emissivity = 0.8; -- Emissivity of aluminum (anodized)
                 radiativeSurfaceArea = 0.03; -- m^2 (estimated)
             };
             headFins = {
@@ -113,7 +113,7 @@ local config = {
                 combustionHeatingCoef = 0.0;
                 frictionHeatingCoef = 0.0;
                 airCoolingCoef = 1.0;
-                emissivity = 0.8; -- Emissivity of aluminum (anodized)
+                emissivity = 0.6; -- Emissivity of aluminum (oxidized)
                 radiativeSurfaceArea = 0.42; -- m^2 (estimated, larger due to fins)
             };
             case = {
@@ -128,13 +128,13 @@ local config = {
                 radiativeSurfaceArea = 0.04; -- m^2 (estimated)
             };
             exhaust = {
-                thermalMass = 1.8; -- kg (guessed)
+                thermalMass = 0.6; -- kg (guessed)
                 specificHeatCapacity = 450; -- J/(kg*K) for iron
                 transfersTo = {'block'};
                 transferSurfaceAreas = {0.005^2}; -- m(^2)
-                combustionHeatingCoef = 2.0;
+                combustionHeatingCoef = 1.8;
                 frictionHeatingCoef = 0.5;
-                airCoolingCoef = 0.2;
+                airCoolingCoef = 0.25;
                 emissivity = 0.9; -- Emissivity of iron (oxidized, high temperature)
                 radiativeSurfaceArea = 0.5; -- m^2 (estimated)
             };
