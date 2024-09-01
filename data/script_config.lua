@@ -1,0 +1,152 @@
+-- Modular Kart Class 2 CSP Physics Script - Config and Parameters Module
+-- Authored by ohyeah2389
+
+
+local config = {
+    misc = {
+        brakeAutoHold = {
+            torque = 30; -- Brake torque in Nm to apply when auto-holding the brakes
+            speed = 5; -- Speed in kmh below which to auto-hold the brakes
+        }
+    };
+    engine = {
+        torqueCurveLUT = ac.DataLUT11.carData(0, 'power_ka100.lut');
+        torqueTrimmer = 1.00;
+        coastRPM = 10000;
+        coastTorque = -2.4;
+        zeroRPMTorque = -0.08;
+        zeroRPMRange = 300;
+        cylindersAmount = 1;
+        compressionMinRPM = 2000;
+        compressionMaxRPM = 5000;
+        compressionIntensity = 2;
+        compressionOffset = 0.5; -- (-1 to 1) typical
+        compressionOffsetGamma = 1; -- (0.001 and up) typical
+        throttle = {
+            epsilon = 5000;
+            gamma = 1.5;
+            rho = 0.75;
+            idle = {
+                startRPM = 300;
+                endRPM = 3000;
+                position = 0.4;
+            }
+        };
+        thermal = {
+            thermalResistance = 0.55; -- Thermal resistance (degree Celsius per Watt)
+            thermalEfficiency = 0.8; -- Thermal efficiency of the engine
+        };
+    };
+    battery = {
+        nominalVoltage = 12.6; -- this is nominal voltage at 100%SOC, the Voltage/SOC LUT is given in relation to nominal voltage at 50%SOC
+        peukertExponent = 1.2; -- Peukert exponent for a typical lead-acid battery
+        startingCapacityAmpHours = 8.0; -- Nominal Amp-hours
+        voltageChargeLUT = ac.DataLUT11.carData(0, 'battery_voltage_soc.lut');
+    };
+    starter = {
+        -- Starter motor parameters
+        gearRatio = 3.5;
+        dragCoefficient = 0.002; -- Drag coefficient for the starter motor
+        engagementThresholdRPM = 500; -- RPM threshold for engagement
+        backEMFConstant = 0.0002; -- V/(RPM)
+        coolingCoef = 0.02;
+        efficiency = 0.85; -- Efficiency of the starter motor
+        nominalVoltage = 12; -- Volts
+        resistance = 0.05; -- Ohms
+        stallTorque = 20; -- Nm
+        thermalResistance = 0.55; -- Thermal resistance (degree Celsius per Watt)
+        maxTemp = 300.0; -- Maximum safe temperature for the starter motor
+        inertia = 0.05; -- kg*m^2
+        grindCoefficient = 0.02
+    };
+    thermal = {
+        components = {
+            cylinderHead = {
+                thermalMass = 1.0; -- kg (guessed)
+                specificHeatCapacity = 900; -- J/(kg*K) for aluminum
+                transfersTo = {'block', 'headFins', 'cylinderWallSleeve'};
+                transferSurfaceAreas = {0.02^2, 0.05^2, 0.008^2}; -- m(^2)
+                combustionHeatingCoef = 1.2;
+                frictionHeatingCoef = 0.3;
+                airCoolingCoef = 0.03;
+                emissivity = 0.6; -- Emissivity of aluminum (oxidized)
+                radiativeSurfaceArea = 0.03; -- m^2 (estimated)
+            };
+            headFins = {
+                thermalMass = 0.7; -- kg (guessed)
+                specificHeatCapacity = 900; -- J/(kg*K) for aluminum
+                transfersTo = {'cylinderHead'};
+                transferSurfaceAreas = {0.05^2}; -- m(^2)
+                combustionHeatingCoef = 0.0;
+                frictionHeatingCoef = 0.0;
+                airCoolingCoef = 1.0;
+                emissivity = 0.8; -- Emissivity of aluminum (anodized)
+                radiativeSurfaceArea = 0.4; -- m^2 (estimated, larger due to fins)
+            };
+            cylinderWallSleeve = {
+                thermalMass = 0.1; -- kg (guessed)
+                specificHeatCapacity = 450; -- J/(kg*K) for iron
+                transfersTo = {'block', 'cylinderHead'};
+                transferSurfaceAreas = {0.03^2, 0.008^2}; -- m(^2)
+                combustionHeatingCoef = 0.4;
+                frictionHeatingCoef = 1.5;
+                airCoolingCoef = 0.02;
+                emissivity = 0.7; -- Emissivity of iron (oxidized)
+                radiativeSurfaceArea = 0.02; -- m^2 (estimated)
+            };
+            block = {
+                thermalMass = 1.5; -- kg (guessed)
+                specificHeatCapacity = 900; -- J/(kg*K) for aluminum
+                transfersTo = {'cylinderWallSleeve', 'blockFins', 'case', 'cylinderHead', 'exhaust'};
+                transferSurfaceAreas = {0.03^2, 0.05^2, 0.02^2, 0.02^2, 0.005^2}; -- m(^2)
+                combustionHeatingCoef = 0.1;
+                frictionHeatingCoef = 0.3;
+                airCoolingCoef = 0.1;
+                emissivity = 0.6; -- Emissivity of aluminum (oxidized)
+                radiativeSurfaceArea = 0.05; -- m^2 (estimated)
+            };
+            blockFins = {
+                thermalMass = 0.6; -- kg (guessed)
+                specificHeatCapacity = 900; -- J/(kg*K) for aluminum
+                transfersTo = {'block'};
+                transferSurfaceAreas = {0.05^2}; -- m(^2)
+                combustionHeatingCoef = 0.0;
+                frictionHeatingCoef = 0.0;
+                airCoolingCoef = 1.0;
+                emissivity = 0.8; -- Emissivity of aluminum (anodized)
+                radiativeSurfaceArea = 0.42; -- m^2 (estimated, larger due to fins)
+            };
+            case = {
+                thermalMass = 0.8; -- kg (guessed)
+                specificHeatCapacity = 900; -- J/(kg*K) for aluminum
+                transfersTo = {'block'};
+                transferSurfaceAreas = {0.02^2}; -- m(^2)
+                combustionHeatingCoef = 1.0;
+                frictionHeatingCoef = 0.6;
+                airCoolingCoef = 0.4;
+                emissivity = 0.6; -- Emissivity of aluminum (oxidized)
+                radiativeSurfaceArea = 0.04; -- m^2 (estimated)
+            };
+            exhaust = {
+                thermalMass = 1.8; -- kg (guessed)
+                specificHeatCapacity = 450; -- J/(kg*K) for iron
+                transfersTo = {'block'};
+                transferSurfaceAreas = {0.005^2}; -- m(^2)
+                combustionHeatingCoef = 2.0;
+                frictionHeatingCoef = 0.5;
+                airCoolingCoef = 0.2;
+                emissivity = 0.9; -- Emissivity of iron (oxidized, high temperature)
+                radiativeSurfaceArea = 0.5; -- m^2 (estimated)
+            };
+        };
+        ambientTemp = sim.ambientTemperature;
+        engineThermalEfficiency = 0.8; -- guessed
+        oilMixRatio = 1/16;
+        heatTransferCoef = 100;
+        jetCrossoverStartRPM = 5000;
+        jetCrossoverEndRPM = 10000;
+    };
+}
+
+
+return config
