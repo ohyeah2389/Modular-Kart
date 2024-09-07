@@ -9,9 +9,10 @@ local config = {
             speed = 5; -- Speed in kmh below which to auto-hold the brakes
         };
         ffbCorrection = {
-            minMultiplier = 0.1;
-            maxSpeed = 20;
-            minSpeed = 10;
+            minMultiplier = 0.5;
+            maxSpeed = 30;
+            minSpeed = 5;
+            fadeoutSpeed = 10;
         };
     };
     engine = {
