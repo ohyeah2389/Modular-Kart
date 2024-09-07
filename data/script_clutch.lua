@@ -12,15 +12,16 @@ local physics = require('script_physics')
 local clutch = {}
 
 
-local clutchShoe = physics(1, 0, 0, 10, 0.5, 0.001, 5.5, 10)
+local clutchShoe = physics(1, 0, -5, 5, 0.7, 0.001, 50, 1000)
 
 
 function clutch.update(dt)
-    local clutchShoePos = clutchShoe:step(game.car_cphys.rpm * -0.01, dt)
+    local clutchShoePos = clutchShoe:step((game.car_cphys.rpm / 60)^2 * clutchShoe.mass * -0.05, dt)
 
     ac.debug("clutchShoePos", clutchShoePos)
+    ac.debug("clutchShoe.force", clutchShoe.force)
 
-    game.car_cphys.clutch = clutchShoePos ^ 4
+    game.car_cphys.clutch = clutchShoe.force / 100
 end
 
 

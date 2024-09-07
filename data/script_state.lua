@@ -31,6 +31,9 @@ local state = {
     };
     thermal = {
         components = {
+            combustionGas = {
+                temp = config.thermal.ambientTemp;
+            };
             cylinderHead = {
                 temp = config.thermal.ambientTemp;
             };

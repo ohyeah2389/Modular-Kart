@@ -49,7 +49,7 @@ function thermal.update(dt)
         local radiativeCooling = 0
 
         -- Heat generation from combustion and friction
-        heatGeneration = heatGeneration + (component.combustionHeatingCoef * math.max(0, state.engine.torque) * 1000 * config.thermal.engineThermalEfficiency * afrHeatEffect)
+        heatGeneration = heatGeneration + (component.combustionHeatingCoef * math.lerp(math.max(0, state.engine.torque), (throttle * rpm / 1000), config.thermal.heatGenerationIdeologyMix) * 1000 * config.thermal.engineThermalEfficiency * afrHeatEffect)
         heatGeneration = heatGeneration + (component.frictionHeatingCoef * rpm)
 
         -- Heat transfer to other components

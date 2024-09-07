@@ -15,7 +15,7 @@ local drivetrain = {}
 function drivetrain.update(dt)
     game.car_cphys.requestedGearIndex = 2
 
-    if game.car_cphys.speedKmh < 10 then
+    if (game.car_cphys.speedKmh < 10) and (game.sim.timeToSessionStart < -3000) then
         if game.car_cphys.gearUp then
             ac.addForce(vec3(0, 0.2, 0), true, vec3(0, 0, 700), true)
             ac.overrideBrakesTorque(2, math.nan, math.nan)

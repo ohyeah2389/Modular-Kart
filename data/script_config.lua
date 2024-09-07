@@ -7,7 +7,12 @@ local config = {
         brakeAutoHold = {
             torque = 30; -- Brake torque in Nm to apply when auto-holding the brakes
             speed = 5; -- Speed in kmh below which to auto-hold the brakes
-        }
+        };
+        ffbCorrection = {
+            minMultiplier = 0.1;
+            maxSpeed = 20;
+            minSpeed = 10;
+        };
     };
     engine = {
         torqueCurveLUT = ac.DataLUT11.carData(0, 'power_ka100.lut');
@@ -61,6 +66,17 @@ local config = {
     };
     thermal = {
         components = {
+            combustionGas = {
+                thermalMass = 0.0005; -- kg (guessed)
+                specificHeatCapacity = 1005; -- J/(kg*K) for air
+                transfersTo = {'cylinderHead', 'exhaust', 'cylinderWallSleeve'};
+                transferSurfaceAreas = {0.01^2, 0.05^2, 0.005^2}; -- m(^2)
+                combustionHeatingCoef = 2.5;
+                frictionHeatingCoef = 0.2;
+                airCoolingCoef = 0.05;
+                emissivity = 1.0;
+                radiativeSurfaceArea = 0.5;
+            };
             cylinderHead = {
                 thermalMass = 1.0; -- kg (guessed)
                 specificHeatCapacity = 900; -- J/(kg*K) for aluminum
@@ -79,7 +95,7 @@ local config = {
                 transferSurfaceAreas = {0.05^2}; -- m(^2)
                 combustionHeatingCoef = 0.0;
                 frictionHeatingCoef = 0.0;
-                airCoolingCoef = 1.0;
+                airCoolingCoef = 1.2;
                 emissivity = 0.8; -- Emissivity of aluminum (anodized)
                 radiativeSurfaceArea = 0.4; -- m^2 (estimated, larger due to fins)
             };
@@ -112,7 +128,7 @@ local config = {
                 transferSurfaceAreas = {0.05^2}; -- m(^2)
                 combustionHeatingCoef = 0.0;
                 frictionHeatingCoef = 0.0;
-                airCoolingCoef = 1.0;
+                airCoolingCoef = 1.2;
                 emissivity = 0.6; -- Emissivity of aluminum (oxidized)
                 radiativeSurfaceArea = 0.42; -- m^2 (estimated, larger due to fins)
             };
@@ -132,8 +148,8 @@ local config = {
                 specificHeatCapacity = 450; -- J/(kg*K) for iron
                 transfersTo = {'block'};
                 transferSurfaceAreas = {0.005^2}; -- m(^2)
-                combustionHeatingCoef = 1.8;
-                frictionHeatingCoef = 0.5;
+                combustionHeatingCoef = 0.2;
+                frictionHeatingCoef = 0.0;
                 airCoolingCoef = 0.25;
                 emissivity = 0.9; -- Emissivity of iron (oxidized, high temperature)
                 radiativeSurfaceArea = 0.5; -- m^2 (estimated)
@@ -145,6 +161,7 @@ local config = {
         heatTransferCoef = 100;
         jetCrossoverStartRPM = 5000;
         jetCrossoverEndRPM = 10000;
+        heatGenerationIdeologyMix = 0.5; -- mix of heat generation ideologies (0 = torque, 1 = rpm * throttle)
     };
 }
 

@@ -10,8 +10,13 @@ local starter = require('script_starter')
 local clutch = require('script_clutch')
 local drivetrain = require('script_drivetrain')
 local thermal = require('script_thermal')
+local sharedData = require('script_sharedData')
+local ffb = require('script_ffb')
+local chassisFlex = require('script_chassisflex')
+
 
 local lastDebugTime = os.clock()
+
 
 -- Shows specific variables in debug
 local function showDebugValues()
@@ -34,7 +39,7 @@ local function showDebugValues()
 end
 
 
-local function resetState()
+local function resetState() -- TODO: implement this
 end
 
 
@@ -43,20 +48,21 @@ local jetHighOpen = ac.ControlButton("__EXT_LIGHT_JETHIGH_OPEN")
 local jetLowClose = ac.ControlButton("__EXT_LIGHT_JETLOW_CLOSE")
 local jetLowOpen = ac.ControlButton("__EXT_LIGHT_JETLOW_OPEN")
 
+
 jetHighClose:onPressed(function()
-    state.engine.highSpeedJet = math.max(0, math.min(8, state.engine.highSpeedJet - 0.25))
+    state.engine.highSpeedJet = math.max(0, math.min(8, state.engine.highSpeedJet - 1/16))
 end)
 
 jetHighOpen:onPressed(function()
-    state.engine.highSpeedJet = math.max(0, math.min(8, state.engine.highSpeedJet + 0.25))
+    state.engine.highSpeedJet = math.max(0, math.min(8, state.engine.highSpeedJet + 1/16))
 end)
 
 jetLowClose:onPressed(function()
-    state.engine.lowSpeedJet = math.max(0, math.min(8, state.engine.lowSpeedJet - 0.25))
+    state.engine.lowSpeedJet = math.max(0, math.min(8, state.engine.lowSpeedJet - 1/16))
 end)
 
 jetLowOpen:onPressed(function()
-    state.engine.lowSpeedJet = math.max(0, math.min(8, state.engine.lowSpeedJet + 0.25))
+    state.engine.lowSpeedJet = math.max(0, math.min(8, state.engine.lowSpeedJet + 1/16))
 end)
 
 
@@ -90,10 +96,14 @@ function script.update(dt)
     drivetrain.update(dt)
     clutch.update(dt)
     thermal.update(dt)
+    ffb.update(dt)
+    chassisFlex.update(dt)
 
     ac.overrideGasInput(1) -- physics gas input is required to be 1 at all times to correctly override stock engine model
     ac.disableEngineLimiter(true)
     ac.overrideEngineTorque(state.engine.torque)
+
+    sharedData.update()
 
     showDebugValues()
 end
