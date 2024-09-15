@@ -5,7 +5,7 @@ local game = require('script_acConnection')
 local config = require('script_config')
 local state = require('script_state')
 local helpers = require('script_helpers')
-local twoStroke = require('script_twoStroke')
+local combustion = require('script_combustion')
 
 
 local thermal = {}
@@ -19,7 +19,7 @@ end
 
 function thermal.update(dt)
     local rpm = game.car_cphys.rpm
-    local throttle = twoStroke.getEffectiveThrottle(game.car_cphys.gas)
+    local throttle = combustion.getEffectiveThrottle(game.car_cphys.gas)
     local jettingRPMFactor = helpers.mapRange(rpm, config.thermal.jetCrossoverStartRPM, config.thermal.jetCrossoverEndRPM, 0, 1, true)
     local airFuelRatioBase = helpers.mapRange(throttle, 0, 1, 8.5, 13.2, true)
 

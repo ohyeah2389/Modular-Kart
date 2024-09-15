@@ -1,4 +1,4 @@
--- Modular Kart Class 2 CSP Physics Script - Two-Stroke Physics Module
+-- Modular Kart Class 2 CSP Physics Script - Internal Combustion Engine Physics Module
 -- Authored by ohyeah2389
 
 

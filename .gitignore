@@ -6,3 +6,4 @@
 *.knh
 *.vao-patch
 *.bank
+extension/lib.lua
