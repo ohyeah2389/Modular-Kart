@@ -103,7 +103,7 @@ function script.update(dt)
     ffb.update(dt)
     chassisFlex.update(dt)
     analysis.update(dt)
-    
+
     ac.overrideGasInput(1) -- physics gas input is required to be 1 at all times to correctly override stock engine model
     ac.disableEngineLimiter(true)
     ac.overrideEngineTorque(state.engine.torque)

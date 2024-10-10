@@ -3,7 +3,6 @@
 
 
 local game = require('script_acConnection')
-local state = require('script_state')
 
 
 local sharedData = {}
@@ -11,14 +10,16 @@ local sharedData = {}
 
 game.sharedData = ac.connect({
     ac.StructItem.key('modkart_c2_shared_' .. car.index),
-    cylinderHeadTemp = ac.StructItem.float(),
-    exhaustGasTemp = ac.StructItem.float(),
-}, true, ac.SharedNamespace.Shared)
+    setupWheel = ac.StructItem.int8(),
+}, true, ac.SharedNamespace.CarDisplay)
 
 
 function sharedData.update()
-    sharedData.cylinderHeadTemp = state.thermal.components.cylinderHead.temp
-    sharedData.exhaustGasTemp = math.lerp(state.thermal.components.combustionGas.temp, state.thermal.components.exhaust.temp, 0.5)
+    sharedData.setupWheel = ac.getScriptSetupValue('CUSTOM_SCRIPT_ITEM_2').value
+
+    ac.debug("sharedData.setupWheel", sharedData.setupWheel)
+
+    ac.store('modkart_c2_shared_' .. car.index .. '.wheel', sharedData.setupWheel)
 end
 
 
