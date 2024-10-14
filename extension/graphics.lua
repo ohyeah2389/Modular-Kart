@@ -131,6 +131,18 @@ local driverLegPhys_R = physObj{
     endstopRate = 50
 }
 
+local brakeDiscPhys = physObj{
+    posMax = 1,
+    posMin = -1,
+    center = 0,
+    mass = 0.5,
+    frictionCoef = 0.3,
+    springCoef = 0,
+    forceMax = 30,
+    constantForce = 0,
+    endstopRate = 50
+}
+
 local sidepodBouncerRight = BouncerObject{
     nodeName = "SidepodBouncerRight",
     posMax = 0.008,
@@ -326,6 +338,11 @@ local driverLeg_R = ac.findNodes("DRIVER:RIG_Leg_R")
 local pedalGas = ac.findNodes("PedalGas")
 local pedalBrake = ac.findNodes("PedalBrake")
 
+local brakeLever = ac.findNodes("BrakeLever")
+local brakeDisc = ac.findNodes("BrakeDiscTabs")
+local brakePad1 = ac.findNodes("BrakePad.001")
+local brakePad2 = ac.findNodes("BrakePad.002")
+
 driverFoot_L:storeCurrentTransformation()
 driverFoot_R:storeCurrentTransformation()
 
@@ -338,6 +355,11 @@ driverLeg_R:storeCurrentTransformation()
 pedalGas:storeCurrentTransformation()
 pedalBrake:storeCurrentTransformation()
 
+brakeLever:storeCurrentTransformation()
+brakeDisc:storeCurrentTransformation()
+brakePad1:storeCurrentTransformation()
+brakePad2:storeCurrentTransformation()
+
 local driverFoot_L_forward, driverFoot_L_up = driverFoot_L:getLook(), driverFoot_L:getUp()
 local driverFoot_R_forward, driverFoot_R_up = driverFoot_R:getLook(), driverFoot_R:getUp()
 
@@ -349,6 +371,11 @@ local driverLeg_R_forward, driverLeg_R_up = driverLeg_R:getLook(), driverLeg_R:g
 
 local pedalGas_forward, pedalGas_up = pedalGas:getLook(), pedalGas:getUp()
 local pedalBrake_forward, pedalBrake_up = pedalBrake:getLook(), pedalBrake:getUp()
+
+local brakeLever_forward, brakeLever_up = brakeLever:getLook(), brakeLever:getUp()
+local brakeDisc_position = brakeDisc:getPosition()
+local brakePad1_position = brakePad1:getPosition()
+local brakePad2_position = brakePad2:getPosition()
 
 
 local function driverLegsAnimation(dt)
@@ -371,6 +398,17 @@ local function driverLegsAnimation(dt)
     pedalGas:setOrientation(pedalGas_forward + vec3(0, 0, car.gas * 0.4), pedalGas_up)
 end
 
+local function brakeDiscAnimation(dt)
+    brakeDisc:setPosition(brakeDisc_position + vec3(0, 0, brakeDiscPhys:step(math.random(-1, 1) * car.speedKmh, dt) * helpers.mapRange(car.brake, 0, 0.2, 1, 0, true) * 0.0003))
+
+    brakePad1:setPosition(brakePad1_position + vec3(helpers.mapRange(car.brake, 0, 0.2, 0, -0.001, true), 0, 0))
+    brakePad2:setPosition(brakePad2_position + vec3(helpers.mapRange(car.brake, 0, 0.2, 0, 0.001, true), 0, 0))
+end
+
+local function nonPhysicsAnimation(dt)
+    brakeLever:setOrientation(brakeLever_forward, brakeLever_up + vec3(0, car.brake * 0.47, 0))
+end
+
 
 local frameRateCheck = {
     sampleCount = 0,
@@ -386,7 +424,7 @@ function script.update(dt)
     ac.boostFrameRate()
     ac.updateDriverModel()
 
-    if (dt == 0) or (math.abs(sim.timeToSessionStart) < 5) then
+    if (dt == 0) or (math.abs(sim.timeToSessionStart) < 3000) then
         frameRateCheck.isActive = false
     else
         frameRateCheck.sampleSum = frameRateCheck.sampleSum + dt
@@ -409,8 +447,11 @@ function script.update(dt)
     if frameRateCheck.isActive then
         bumperAnimation(dt)
         driverAnimation(dt)
+        brakeDiscAnimation(dt)
         driverLegsAnimation(dt)
     end
+
+    nonPhysicsAnimation(dt)
 
     local carNode = ac.findNodes("BODYTR")
     local tierodL_target = ac.findNodes("DIR2_anim_tierodLF")

@@ -10,16 +10,43 @@ local helpers = require('script_helpers')
 
 local ffb = {}
 
--- it might be better to also add a gamma effect here to keep the small forces at these speeds but to still clamp or smoothly reduce the max forces to cut back on the oscillation
+ffb.lastFFB = 0
+ffb.oscillationCounter = 0
+ffb.dampingFactor = 1
+
 function ffb.update(dt)
-    local ffbMultiplier = 1
-    if game.car_cphys.speedKmh > config.misc.ffbCorrection.minSpeed and game.car_cphys.speedKmh < config.misc.ffbCorrection.maxSpeed then
-        local slowFadeout = helpers.mapRange(game.car_cphys.speedKmh, config.misc.ffbCorrection.minSpeed, config.misc.ffbCorrection.minSpeed + config.misc.ffbCorrection.fadeoutSpeed, 1, config.misc.ffbCorrection.minMultiplier, true)
-        local fastFadeout = helpers.mapRange(game.car_cphys.speedKmh, config.misc.ffbCorrection.maxSpeed - config.misc.ffbCorrection.fadeoutSpeed, config.misc.ffbCorrection.maxSpeed, config.misc.ffbCorrection.minMultiplier, 1, true)
-        ffbMultiplier = math.max(slowFadeout, fastFadeout)
+    local currentFFB = game.car_cphys.ffb
+    local speed = game.car_cphys.speedKmh
+
+    -- Detect oscillation
+    if math.abs(currentFFB - ffb.lastFFB) > config.misc.ffbCorrection.oscillationThreshold * math.abs(currentFFB) then
+        ffb.oscillationCounter = math.min(config.misc.ffbCorrection.oscillationCounterCeiling, ffb.oscillationCounter + 1)
+    else
+        ffb.oscillationCounter = math.max(0, ffb.oscillationCounter - config.misc.ffbCorrection.oscillationCounterDecay)
     end
-    ac.setSteeringFFB(game.car_cphys.ffb * ffbMultiplier)
-    ac.debug('ffbMultiplier', ffbMultiplier)
+
+    -- Calculate damping factor
+    if ffb.oscillationCounter > config.misc.ffbCorrection.oscillationCounterThreshold and 
+       speed > config.misc.ffbCorrection.minSpeed and 
+       speed < config.misc.ffbCorrection.maxSpeed then
+        ffb.dampingFactor = math.max(0, math.min(config.misc.ffbCorrection.dampingMax, ffb.dampingFactor + config.misc.ffbCorrection.dampingStep))
+    else
+        ffb.dampingFactor = math.max(0, math.min(config.misc.ffbCorrection.dampingMax, ffb.dampingFactor - config.misc.ffbCorrection.dampingRecoveryStep))
+    end
+
+    -- Apply damping by weighting towards lastFFB
+    local dampedFFB = currentFFB * (1 - ffb.dampingFactor) + ffb.lastFFB * ffb.dampingFactor
+
+    ac.setSteeringFFB(dampedFFB)
+
+    -- Update lastFFB for the next frame
+    ffb.lastFFB = dampedFFB
+
+    -- Debug output
+    ac.debug('ffb: dampingFactor', ffb.dampingFactor)
+    ac.debug('ffb: oscillationCounter', ffb.oscillationCounter)
+    ac.debug('ffb: currentFFB', currentFFB)
+    ac.debug('ffb: dampedFFB', dampedFFB)
 end
 
 
