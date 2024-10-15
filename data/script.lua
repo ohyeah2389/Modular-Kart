@@ -106,7 +106,7 @@ function script.update(dt)
 
     ac.overrideGasInput(1) -- physics gas input is required to be 1 at all times to correctly override stock engine model
     ac.disableEngineLimiter(true)
-    ac.overrideEngineTorque(state.engine.torque)
+    ac.overrideEngineTorque(state.engine.torque + (state.starter.engaged and state.starter.torque or 0))
 
     sharedData.update()
 

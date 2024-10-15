@@ -14,6 +14,8 @@ local state = {
         temp = config.thermal.ambientTemp;
         lowSpeedJet = 1.5; -- turns out from full in
         highSpeedJet = 1.5; -- turns out from full in
+        previousThrottle = 0.0;
+        previousIdleThrottle = 0.0;
     };
     starter = {
         engaged = false;

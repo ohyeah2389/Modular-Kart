@@ -11,10 +11,17 @@ local helpers = require('script_helpers')
 local twoStroke = {}
 
 
-function twoStroke.getEffectiveThrottle(rawGas)
-    local effectiveThrottle = math.min(((22380 * rawGas ^ config.engine.throttle.gamma)/(math.pi * game.car_cphys.rpm * (config.engine.throttle.rho ^ config.engine.throttle.gamma) + config.engine.throttle.epsilon)), 1)
+function twoStroke.getEffectiveThrottle(rawGas, dt)
+    local rpmFactor = helpers.mapRange(game.car_cphys.rpm, config.engine.throttle.lagMinRPM, config.engine.throttle.lagMaxRPM, 0.5, 10, true)
+    local lagCoefficient = math.exp(-rpmFactor * dt)
+    local laggedThrottle = rawGas > state.engine.previousThrottle and math.lerp(rawGas, state.engine.previousThrottle, lagCoefficient) or rawGas
+    local effectiveThrottle = math.min(((22380 * laggedThrottle ^ config.engine.throttle.gamma)/(math.pi * game.car_cphys.rpm * (config.engine.throttle.rho ^ config.engine.throttle.gamma) + config.engine.throttle.epsilon)), 1)
     local idleThrottle = helpers.mapRange(game.car_cphys.rpm, config.engine.throttle.idle.startRPM, config.engine.throttle.idle.endRPM, config.engine.throttle.idle.position, 0, true)
-    return car.extraB and 0 or helpers.mapRange(helpers.quarticInverse(effectiveThrottle), 0, 1, idleThrottle, 1, true)
+    local laggedIdleThrottle = idleThrottle > state.engine.previousIdleThrottle and math.lerp(idleThrottle, state.engine.previousIdleThrottle, lagCoefficient) or idleThrottle
+    local throttleFadeout = helpers.mapRange(game.car_cphys.rpm, 0, 300, 0, 1, true)
+    state.engine.previousThrottle = laggedThrottle
+    state.engine.previousIdleThrottle = laggedIdleThrottle
+    return car.extraB and 0 or helpers.mapRange(helpers.quarticInverse(effectiveThrottle), 0, 1, laggedIdleThrottle, 1, true) * throttleFadeout
 end
 
 
@@ -26,13 +33,13 @@ function twoStroke.update(dt)
     local angularVelocity = (helpers.mapRange(game.car_cphys.rpm, 5, 10, 0, game.car_cphys.rpm, true) * (2 * math.pi / 60)) -- Convert RPM to radians per second
     state.engine.angle = (state.engine.angle + (angularVelocity * dt)) % (2 * math.pi) -- Update angle in radians
 
-    state.engine.compressionWave = -0.5 + (1 / (1 + math.exp(-config.engine.compressionOffsetGamma * (math.sin(-state.engine.angle * config.engine.cylindersAmount) - (config.engine.compressionOffset * ((twoStroke.getEffectiveThrottle(game.car_cphys.gas) - 0.5) * -2))))))
+    state.engine.compressionWave = -0.5 + (1 / (1 + math.exp(-config.engine.compressionOffsetGamma * (math.sin(-state.engine.angle * config.engine.cylindersAmount) - (config.engine.compressionOffset * ((twoStroke.getEffectiveThrottle(game.car_cphys.gas, dt) - 0.5) * -2))))))
     state.engine.compressionTorque = state.engine.compressionWave * config.engine.compressionIntensity *
         helpers.mapRange(game.car_cphys.rpm, config.engine.compressionMinRPM, config.engine.compressionMaxRPM, 1, 0, true) *
         helpers.mapRange(game.car_cphys.rpm, 1, 200, 0, 1, true) -- *
         --helpers.mapRange(game.car_cphys.gas, 0, 1, 0.6, 1, true)
 
-    state.engine.torque = helpers.mapRange(twoStroke.getEffectiveThrottle(game.car_cphys.gas), 0, 1,
+    state.engine.torque = helpers.mapRange(twoStroke.getEffectiveThrottle(game.car_cphys.gas, dt), 0, 1,
         helpers.mapRange(game.car_cphys.rpm, config.engine.zeroRPMRange, config.engine.zeroRPMRange + 2000, zeroCurve, coastCurve, true),
         helpers.mapRange(game.car_cphys.rpm, config.engine.zeroRPMRange, config.engine.zeroRPMRange + 2000, zeroCurve, powerCurve * state.thermal.afrDetuneEffect, true),
         true) + state.engine.compressionTorque

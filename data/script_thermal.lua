@@ -19,7 +19,7 @@ end
 
 function thermal.update(dt)
     local rpm = game.car_cphys.rpm
-    local throttle = combustion.getEffectiveThrottle(game.car_cphys.gas)
+    local throttle = combustion.getEffectiveThrottle(game.car_cphys.gas, dt)
     local jettingRPMFactor = helpers.mapRange(rpm, config.thermal.jetCrossoverStartRPM, config.thermal.jetCrossoverEndRPM, 0, 1, true)
     local airFuelRatioBase = helpers.mapRange(throttle, 0, 1, 8.5, 13.2, true)
 

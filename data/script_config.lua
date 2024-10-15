@@ -39,10 +39,12 @@ local config = {
             epsilon = 5000;
             gamma = 1.5;
             rho = 0.75;
+            lagMaxRPM = 5000;
+            lagMinRPM = 500;
             idle = {
                 startRPM = 300;
-                endRPM = 3000;
-                position = 0.46;
+                endRPM = 1600;
+                position = 1;
             }
         };
         thermal = {
@@ -58,19 +60,19 @@ local config = {
     };
     starter = {
         -- Starter motor parameters
-        gearRatio = 3.5;
-        dragCoefficient = 0.002; -- Drag coefficient for the starter motor
         engagementThresholdRPM = 500; -- RPM threshold for engagement
-        backEMFConstant = 0.0002; -- V/(RPM)
-        coolingCoef = 0.02;
-        efficiency = 0.85; -- Efficiency of the starter motor
-        nominalVoltage = 12; -- Volts
-        resistance = 0.05; -- Ohms
-        stallTorque = 20; -- Nm
-        thermalResistance = 0.55; -- Thermal resistance (degree Celsius per Watt)
-        maxTemp = 300.0; -- Maximum safe temperature for the starter motor
-        inertia = 0.05; -- kg*m^2
-        grindCoefficient = 0.02
+        bendixKickoffTorque = 0.5; -- Nm
+    };
+    electricMotors = {
+        starter = {
+            resistance = 0.1; -- Ohms
+            inductance = 0.0001; -- Henry
+            torqueConstant = 0.06; -- Nm/A
+            backEMFConstant = 0.15; -- V/(rad/s)
+            inertia = 0.000000001; -- kg*m^2
+            frictionCoefficient = 100; -- Nm/(rad/s)
+            maxCurrent = 20; -- Amps
+        };
     };
     thermal = {
         components = {

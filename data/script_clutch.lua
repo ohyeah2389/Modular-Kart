@@ -8,17 +8,43 @@ local physics = require('script_physics')
 
 local clutch = {}
 
+local lastClutch = 0
 
-local clutchShoe = physics(1, 0, -5, 5, 0.7, 0.001, 50, 1000) -- initialize clutch shoe object
+
+local clutchShoe = physics{
+    posMax = 0.02,  -- Maximum outward travel of clutch shoe (in meters)
+    posMin = 0,
+    center = 0,
+    mass = 0.1,  -- Mass of clutch shoe in kg
+    frictionCoef = 0,
+    staticFrictionCoef = 0,
+    springCoef = 60000,  -- Spring coefficient to return shoe to rest position
+    forceMax = 100000,
+    radius = 0.1,  -- Radius of clutch drum (in meters)
+    centrifugal = true  -- Use centrifugal mode
+}
 
 
 function clutch.update(dt) -- clutch percentage is calculated based off of how much force the clutch shoe(s) apply to the clutch drum
-    local clutchShoePos = clutchShoe:step((game.car_cphys.rpm / 60)^2 * clutchShoe.mass * -0.05, dt) -- run physics on clutch shoe object
+    local engineRPM = game.car_cphys.rpm
+    local angularVelocity = (engineRPM / 60) * 2 * math.pi  -- Convert RPM to rad/s
 
-    ac.debug("clutchShoePos", clutchShoePos)
+    clutchShoe:step(angularVelocity, dt) -- run physics on clutch shoe object
+
+    game.car_cphys.clutch = math.applyLag(lastClutch, clutchShoe.position > 0.018 and math.clamp(clutchShoe.force * 0.001, 0, 1) or 0, 0.05, dt)
+
+    if game.car_cphys.clutch > 0.8 then
+        game.car_cphys.clutch = 1
+    end
+
+    if (clutchShoe.force < 0) or (clutchShoe.position < 0.018) then
+        game.car_cphys.clutch = 0
+    end
+
+    lastClutch = game.car_cphys.clutch
+
+    ac.debug("clutchShoe.position", clutchShoe.position)
     ac.debug("clutchShoe.force", clutchShoe.force)
-
-    game.car_cphys.clutch = clutchShoe.force / 100 -- divisor is a scalar for clutch force to clutch position
 end
 
 
