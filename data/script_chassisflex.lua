@@ -23,7 +23,7 @@ function chassisFlex.update(dt)
     local startBlend = helpers.mapRange(game.sim.timeToSessionStart / -1000, blendDelay, blendTime, 0, 1)
 
     chassisFlex.chassisTwistStiffness = chassisTwistStiffnessSetupValue + ((chassisBendStiffnessSetupValue - 1300) * 0.2)
-    chassisFlex.chassisBendStiffness = chassisBendStiffnessSetupValue + ((chassisTwistStiffnessSetupValue - 3600) * 0.1)
+    chassisFlex.chassisBendStiffness = chassisBendStiffnessSetupValue + ((chassisTwistStiffnessSetupValue - 3000) * 0.1)
 
     ac.debug('chassisTwistStiffnessSetupValue', chassisTwistStiffnessSetupValue)
     ac.debug('chassisBendStiffnessSetupValue', chassisBendStiffnessSetupValue)
