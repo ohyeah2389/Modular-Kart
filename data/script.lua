@@ -21,7 +21,7 @@ local lastDebugTime = os.clock()
 
 -- Shows specific variables in debug
 local function showDebugValues()
-    if os.clock() - lastDebugTime > 0.2 then
+    if os.clock() - lastDebugTime > 0.05 then
         lastDebugTime = os.clock()
         ac.debug("state.engine.torque", state.engine.torque)
         ac.debug("state.engine.compressionTorque", state.engine.compressionTorque)
