@@ -2,7 +2,7 @@ Thank you for downloading the Modular Kart Class 2 vehicle for Assetto Corsa.
 It is a work-in-progress in its physics and graphics, and is not complete or fully representative of a real kart, but I hope it will still be enjoyable to use.
 Every single component of this kart for AC has been written, configured, modeled, recorded, or generated from scratch by me (with some occasional help from some of the members (Arch, JPG_18, etc.) of the CSP Discord server for things like tire model tweaks and miscellaneous physics advice, as well as using some utilities written by the user Arch). 
 No part of this kart mod has been sourced from anywhere other than the template car distributed with Assetto Corsa by Kunos.
-If you have any questions, comments, suggestions, or notes that you'd like to share with me, you can contact me on Discord @ohyeah2389, or by email at ohyeah2389@yahoo.com.
+If you have any questions, comments, suggestions, or notes that you'd like to share with me, you can use this repository's Issues or Pull Request features, or you can contact me on Discord @ohyeah2389.
 
 -ohyeah2389
 
