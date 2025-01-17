@@ -88,5 +88,10 @@ function helpers.getOrientationInCarFrame(node, carNode)
     return forward, up
 end
 
+function helpers.logit(x, center)
+    center = center or 0.5  -- Default center is 0.5 if not provided
+    local adjustedX = x - center
+    return math.log(adjustedX / (1 - adjustedX))
+end
 
 return helpers
