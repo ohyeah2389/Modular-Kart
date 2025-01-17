@@ -40,5 +40,5 @@ Karts operate very differently from how cars operate, and this is also true of t
 
 🟨 **CAUTION:** You should **NOT** set up your wheel to use Real Feel in the CSP settings (under FFB Tweaks). As mentioned above, the COSMIC suspension system, on this small scale, causes jitters at low speeds which transfer to the FFB system. I have a system in place to mitigate this, but it is deactivated if the Real Feel option is enabled.
 
-🟥 **WARNING:** This kart mod is VERY unfinished in many aspects. Large parts of the visual model are missing (such as the entire brake system, the pedals, the entire engine bottom end, the drivetrain, etc.) The sounds are also very rough and will likely be redone and expanded-- if not replaced by real recordings.
+🟥 **WARNING:** This kart mod is VERY unfinished in many aspects. Large parts of the visual model are missing (drivetrain, etc.) The sounds are also very rough and will likely be redone and expanded-- if not replaced by real recordings.
 
