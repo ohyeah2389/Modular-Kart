@@ -1,0 +1,3 @@
+idle = 1500, rec 2000-2500
+clutch start = 3400
+clutch constant = 4300

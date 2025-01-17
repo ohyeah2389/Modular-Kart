@@ -1,9 +1,14 @@
 *.ksanim
+*.knh
 *.png
 *.kn5
 *.dds
 *.jpg
-*.knh
 *.vao-patch
 *.bank
-extension/lib.lua
+*.zip
+*.fbx
+*.obj
+/Art
+/CFD
+/Photogrammetry Images
