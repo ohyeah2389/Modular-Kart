@@ -6,7 +6,7 @@ If you have any questions, comments, suggestions, or notes that you'd like to sh
 
 -ohyeah2389
 
-###Introduction:
+### Introduction:
 
 This is my attempt to bring the world of professional/outdoor/owner kart racing to Assetto Corsa at a higher fidelity than has been accomplished before. Assetto Corsa is famously a car racing/driving sim, but with the physics extensions provided by the popular Custom Shaders Patch physics and graphics extension, I do now believe that karts are possible to simulate with it.
 
@@ -14,13 +14,13 @@ I've been working for the past few months on a completely scratch-built implemen
 
 Please read the LICENSE file for information on the license this code is provided to you under. Attribution must be given to the original creator (ohyeah2389) wherever it is posted or used. No commercial use is allowed (for example, no putting this kart model or any derivatives of it or its components on a pay-for-use simulator, and no using it or any derivatives of it or its components as part of a training program for a for-profit race team).
 
-###Installation:
+### Installation:
 
 You should be able to drag-n-drop this downloaded zip file onto Content Manager and install it that way. Manual installation is also possible and recommended if you are comfortable with doing that.
 If you are installing an update, please select "Clean installation" in the installation type dropdown in Content Manager's install window. Be aware that this will probably wipe your skins folder upon reinstallation of the kart.
 If this process leads to any unexpected behavior, please let me know-- Content Manager's automatic installation of mods can often cause issues, especially with mods that are not formatted traditionally like this one.
 
-###Features:
+### Features:
 
 Karts operate very differently from how cars operate, and this is also true of this kart in AC. Here are some of the key elements that are different from basically every other mod you may have used for AC before:
 
