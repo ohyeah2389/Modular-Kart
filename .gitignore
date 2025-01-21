@@ -1,6 +1,5 @@
 *.ksanim
 *.knh
-*.png
 *.kn5
 *.dds
 *.jpg
@@ -12,3 +11,4 @@
 /Art
 /CFD
 /Photogrammetry Images
+/ohyeah2389_modkart_class2/**/*.png
