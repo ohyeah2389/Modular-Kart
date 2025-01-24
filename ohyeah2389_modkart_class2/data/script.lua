@@ -28,11 +28,6 @@ local function showDebugValues()
         ac.debug("state.starter.engaged", state.starter.engaged)
         ac.debug("state.starter.torque", state.starter.torque)
         ac.debug("state.starter.voltageDraw", state.starter.voltageDraw)
-        ac.debug("state.thermal.airFuelRatio", state.thermal.airFuelRatio)
-        ac.debug("state.thermal.afrDetuneEffect", state.thermal.afrDetuneEffect)
-        for componentName, component in pairs(state.thermal.components) do
-            ac.debug("state.thermal.components." .. componentName .. ".temp", component.temp)
-        end
     end
 end
 
