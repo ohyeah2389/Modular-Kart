@@ -37,10 +37,6 @@ local function showDebugValues()
 end
 
 
-local function resetState() -- TODO: implement this
-end
-
-
 local jetHighClose = ac.ControlButton("__EXT_LIGHT_JETHIGH_CLOSE")
 local jetHighOpen = ac.ControlButton("__EXT_LIGHT_JETHIGH_OPEN")
 local jetLowClose = ac.ControlButton("__EXT_LIGHT_JETLOW_CLOSE")
@@ -78,7 +74,6 @@ end
 -- Called when car teleports to pits or session resets
 ---@diagnostic disable-next-line: duplicate-set-field
 function script.reset()
-    resetState()
 end
 
 ac.onCarJumped(0, script.reset)
@@ -96,7 +91,7 @@ function script.update(dt)
     clutch.update(dt)
     ffb.update(dt)
 
-    ac.overrideGasInput(1) -- physics gas input is required to be 1 at all times to correctly override stock engine model
+    ac.overrideGasInput(1) -- physics gas input is required to be 1 at all times to correctly "override" stock engine model
     ac.disableEngineLimiter(true)
     ac.overrideEngineTorque(state.engine.torque + (state.starter.engaged and state.starter.torque or 0))
 
