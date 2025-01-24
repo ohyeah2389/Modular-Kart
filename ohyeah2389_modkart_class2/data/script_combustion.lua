@@ -26,7 +26,7 @@ function twoStroke.getEffectiveThrottle(rawGas, dt)
     ac.debug("realisticThrottle", realisticThrottle)
     ac.debug("laggedThrottle", laggedThrottle)
     state.engine.previousThrottle = laggedThrottle
-    return car.extraB and 0 or realisticThrottle
+    return car.extraB and 0 or realisticThrottle ^ config.engine.throttle.gamma
 end
 
 
