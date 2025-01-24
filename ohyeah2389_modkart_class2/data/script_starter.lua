@@ -5,11 +5,6 @@
 local game = require('script_acConnection')
 local config = require('script_config')
 local state = require('script_state')
-
-
-local game = require('script_acConnection')
-local config = require('script_config')
-local state = require('script_state')
 local electricMotor = require('script_electricMotor')
 
 
