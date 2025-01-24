@@ -9,11 +9,8 @@ local combustion = require('script_combustion')
 local starter = require('script_starter')
 local clutch = require('script_clutch')
 local drivetrain = require('script_drivetrain')
-local thermal = require('script_thermal')
 local sharedData = require('script_sharedData')
 local ffb = require('script_ffb')
-local chassisFlex = require('script_chassisflex')
-local analysis = require('script_analysis')
 
 
 local lastDebugTime = os.clock()
@@ -82,11 +79,9 @@ end
 ---@diagnostic disable-next-line: duplicate-set-field
 function script.reset()
     resetState()
-    analysis.prepare()
 end
 
 ac.onCarJumped(0, script.reset)
-analysis.prepare()
 
 -- Run by game every physics tick (~333 Hz)
 ---@diagnostic disable-next-line: duplicate-set-field
@@ -99,10 +94,7 @@ function script.update(dt)
     starter.update(dt)
     drivetrain.update(dt)
     clutch.update(dt)
-    thermal.update(dt)
     ffb.update(dt)
-    chassisFlex.update(dt)
-    analysis.update(dt)
 
     ac.overrideGasInput(1) -- physics gas input is required to be 1 at all times to correctly override stock engine model
     ac.disableEngineLimiter(true)
