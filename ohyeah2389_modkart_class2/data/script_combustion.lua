@@ -12,22 +12,26 @@ local twoStroke = {}
 
 
 function twoStroke.getEffectiveThrottle(rawGas, dt)
-    local rpmFactor = helpers.mapRange(game.car_cphys.rpm, config.engine.throttle.lagMinRPM, config.engine.throttle.lagMaxRPM, 0.5, 10, true)
-    local lagCoefficient = math.exp(-rpmFactor * dt)
-    local laggedThrottle = rawGas > state.engine.previousThrottle and math.lerp(rawGas, state.engine.previousThrottle, lagCoefficient) or rawGas
-    local effectiveThrottle = math.clamp(game.car_cphys.rpm > (config.engine.throttle.curveTop * laggedThrottle ^ config.engine.throttle.gamma) and ((config.engine.throttle.curveTop / game.car_cphys.rpm) * laggedThrottle ^ config.engine.throttle.gamma) ^ config.engine.throttle.mapGamma or 1, 0, 1)
-    local idleThrottle = helpers.mapRange(game.car_cphys.rpm, config.engine.throttle.idle.startRPM, config.engine.throttle.idle.endRPM, config.engine.throttle.idle.position, 0, true)
-    local laggedIdleThrottle = idleThrottle > state.engine.previousIdleThrottle and math.lerp(idleThrottle, state.engine.previousIdleThrottle, lagCoefficient) or idleThrottle
-    local throttleFadeout = helpers.mapRange(game.car_cphys.rpm, 0, 300, 0, 1, true)
+    local idledThrottle = math.clamp(helpers.mapRange(game.car_cphys.rpm, 0, config.engine.throttle.idleRPM, 1, 0, true), 0, config.engine.throttle.idleMaxThrottle) + rawGas
+    local laggedThrottle = state.engine.previousThrottle and math.applyLag(state.engine.previousThrottle, idledThrottle, helpers.mapRange(game.car_cphys.rpm, config.engine.throttle.lagMaxRPM, config.engine.throttle.lagMinRPM, config.engine.throttle.lagMax, config.engine.throttle.lagMin, true), dt) or rawGas
+    local realisticThrottle = math.clamp(
+            (config.engine.throttle.topRPM / game.car_cphys.rpm)
+            * laggedThrottle ^ (
+                ((1 - ((game.car_cphys.rpm / config.engine.throttle.topRPM) ^ (config.engine.throttle.tilt / config.engine.throttle.shift)))
+                * (config.engine.throttle.peel * config.engine.throttle.shift))
+                + ((game.car_cphys.rpm / config.engine.throttle.topRPM) ^ (config.engine.throttle.tilt / config.engine.throttle.shift))
+            ),
+            0, 1)
+    ac.debug("rawGas", rawGas)
+    ac.debug("realisticThrottle", realisticThrottle)
+    ac.debug("laggedThrottle", laggedThrottle)
     state.engine.previousThrottle = laggedThrottle
-    state.engine.previousIdleThrottle = laggedIdleThrottle
-    ac.debug("effectiveThrottle", effectiveThrottle)
-    return car.extraB and 0 or helpers.mapRange(helpers.quarticInverse(effectiveThrottle), 0, 1, laggedIdleThrottle, 1, true) * throttleFadeout
+    return car.extraB and 0 or realisticThrottle
 end
 
 
 function twoStroke.update(dt)
-    local zeroCurve = helpers.mapRange(game.car_cphys.rpm, 0, config.engine.zeroRPMRange, 0.001, config.engine.zeroRPMTorque, false)
+    local zeroCurve = helpers.mapRange(game.car_cphys.rpm, 0, config.engine.zeroRPMRangeBottom, 0, config.engine.zeroRPMTorque, false)
     local coastCurve = helpers.mapRange(game.car_cphys.rpm, 0, config.engine.coastRPM, 0, config.engine.coastTorque, false)
     local powerCurve = config.engine.torqueCurveLUT:get(game.car_cphys.rpm) * config.engine.torqueTrimmer
 
@@ -41,8 +45,8 @@ function twoStroke.update(dt)
         --helpers.mapRange(game.car_cphys.gas, 0, 1, 0.6, 1, true)
 
     state.engine.torque = helpers.mapRange(twoStroke.getEffectiveThrottle(game.car_cphys.gas, dt), 0, 1,
-        helpers.mapRange(game.car_cphys.rpm, config.engine.zeroRPMRange, config.engine.zeroRPMRange + 2000, zeroCurve, coastCurve, true),
-        helpers.mapRange(game.car_cphys.rpm, config.engine.zeroRPMRange, config.engine.zeroRPMRange + 2000, zeroCurve, powerCurve, true),
+        helpers.mapRange(game.car_cphys.rpm, config.engine.zeroRPMRangeBottom, config.engine.zeroRPMRangeTop, zeroCurve, coastCurve, true),
+        helpers.mapRange(game.car_cphys.rpm, config.engine.zeroRPMRangeBottom, config.engine.zeroRPMRangeTop, zeroCurve, powerCurve, true),
         true) + state.engine.compressionTorque
 end
 
