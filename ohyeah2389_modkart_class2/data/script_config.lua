@@ -23,7 +23,7 @@ local config = {
         };
     };
     engine = {
-        torqueCurveLUT = ac.DataLUT11.carData(0, 'power_ka100.lut');
+        torqueCurveLUT = ac.DataLUT11.carData(0, 'power.lut');
         torqueTrimmer = 1.00;
         coastRPM = 10000;
         coastTorque = -2.4;
