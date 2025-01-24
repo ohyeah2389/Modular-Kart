@@ -30,37 +30,7 @@ local state = {
         voltage = config.battery.nominalVoltage;
         charge = config.battery.startingCapacityAmpHours * config.battery.nominalVoltage * 0.85; -- start session mostly charged
         effectiveCapacity = config.battery.startingCapacityAmpHours * config.battery.nominalVoltage;
-    };
-    thermal = {
-        components = {
-            combustionGas = {
-                temp = config.thermal.ambientTemp;
-            };
-            cylinderHead = {
-                temp = config.thermal.ambientTemp;
-            };
-            headFins = {
-                temp = config.thermal.ambientTemp;
-            };
-            cylinderWallSleeve = {
-                temp = config.thermal.ambientTemp;
-            };
-            block = {
-                temp = config.thermal.ambientTemp;
-            };
-            blockFins = {
-                temp = config.thermal.ambientTemp;
-            };
-            case = {
-                temp = config.thermal.ambientTemp;
-            };
-            exhaust = {
-                temp = config.thermal.ambientTemp;
-            };
-        };
-        airFuelRatio = 100;
-        afrDetuneEffect = 1.0;
-    };
+    }
 }
 
 
