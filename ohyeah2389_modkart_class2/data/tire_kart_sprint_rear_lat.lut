@@ -104,12 +104,12 @@
 39500	|	0.356
 40000	|	0.356
 
-;Generated on 2025-01-25 16:17:56 from the following parameters:
+;Generated on 2025-01-25 17:58:55 from the following parameters:
 
 ;REF_M	1.55
 ;SLOPE_0	1.2
 ;SLOPE_1	2.0
 ;ADHESION	200
 ;X_MULT	1.4
-;SLOPE_X	0.7
+;SLOPE_X	0.6
 ;M_CLAMP	10
