@@ -88,8 +88,22 @@ function KartAnimator:initialize()
             constantForce = 0,
             endstopRate = 50,
             flipped = false
+        },
+        nosecone = NodeAnimator{
+            nodeName = "Nassau Bouncer",
+            posMax = 0.0,
+            posMin = -0.0,
+            center = 0,
+            mass = 1.5,
+            frictionCoef = 0.2,
+            staticFrictionCoef = 0,
+            springCoef = 0.0,
+            forceMax = 100,
+            constantForce = 0,
+            endstopRate = 80
         }
     }
+
 
     -- Node configuration
     self.nodes = {
@@ -146,12 +160,14 @@ function KartAnimator:update(dt, angularAcceleration)
     local forceBumperRear = (car.acceleration.y * 0.2 * self.physics.bumperRear.physics.mass)
     local forceBumperRearAxial = (angularAcceleration.z * 0.03 * self.physics.bumperRearAxial.physics.mass)
     local forceBumperRearVertical = (car.acceleration.y * 0.1 * self.physics.bumperRearVertical.physics.mass)
+    local forceNosecone = (car.acceleration.x * 0.5)
 
     self.physics.sidepodRight:update(forceSidepodRight, vec3(1, 0, 0), vec3(0, 0, 0), dt)
     self.physics.sidepodLeft:update(forceSidepodLeft, vec3(1, 0, 0), vec3(0, 0, 0), dt)
     self.physics.bumperRear:update(forceBumperRear, vec3(0, 1, 0), vec3(0, 0, 0), dt)
     self.physics.bumperRearAxial:update(forceBumperRearAxial, vec3(1, 0, 0), vec3(0, 0, 0), dt)
     self.physics.bumperRearVertical:update(forceBumperRearVertical, vec3(0, 0, 0), vec3(0, 0, 1), dt)
+    self.physics.nosecone:update(forceNosecone, vec3(1, 0, 0), vec3(0, 0, 0), dt)
 
     self.physics.brakeDisc.posMax = helpers.mapRange(car.brake, 0, 0.2, 1, 0.1, true)
     self.physics.brakeDisc.posMin = helpers.mapRange(car.brake, 0, 0.2, -1, -0.1, true)

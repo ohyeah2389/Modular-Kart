@@ -66,6 +66,43 @@ local function wheelSelection()
 end
 
 
+local function nassauSelection()
+    local setupItem = ac.load('modkart_c2_shared_' .. car.index .. '.nassau') or 0
+    local nassauOTK = ac.findNodes("OTK M7 Nassau")
+    local nassauKG = ac.findNodes("KG508_Nassau")
+    local nassauEuro = ac.findNodes("Eurostar Dynamica Nassau")
+
+    if setupItem == 0 then
+        nassauOTK:setVisible(true)
+        nassauKG:setVisible(false)
+        nassauEuro:setVisible(false)
+    elseif setupItem == 1 then
+        nassauOTK:setVisible(false)
+        nassauKG:setVisible(true)
+        nassauEuro:setVisible(false)
+    elseif setupItem == 2 then
+        nassauOTK:setVisible(false)
+        nassauKG:setVisible(false)
+        nassauEuro:setVisible(true)
+    end
+end
+
+
+local function frontBumperSelection()
+    local setupItem = ac.load('modkart_c2_shared_' .. car.index .. '.frontBumper') or 0
+    local frontBumperOTK = ac.findNodes("OTK M6 Nosecone")
+    local frontBumperKG = ac.findNodes("KG506 Nosecone")
+
+    if setupItem == 0 then
+        frontBumperOTK:setVisible(true)
+        frontBumperKG:setVisible(false)
+    elseif setupItem == 1 then
+        frontBumperOTK:setVisible(false)
+        frontBumperKG:setVisible(true)
+    end
+end
+
+
 local frameRateChecker = FrameRateChecker()
 local DriverAnimator = require("driver_animator")
 local KartAnimator = require("kart_animator")
@@ -113,4 +150,6 @@ function script.update(dt)
     tierodRControl:setPosition(helpers.getPositionInCarFrame(tierodRTarget, carNode))
 
     wheelSelection()
+    nassauSelection()
+    frontBumperSelection()
 end
