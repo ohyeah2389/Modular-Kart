@@ -1,7 +1,7 @@
-0	|	8.000
-20	|	8.000
-40	|	7.734
-60	|	5.643
+0	|	5.000
+20	|	5.000
+40	|	5.000
+60	|	5.000
 80	|	4.593
 100	|	3.960
 120	|	3.535
@@ -120,12 +120,12 @@
 39500	|	0.506
 40000	|	0.506
 
-;Generated on 2025-02-09 02:15:05 from the following parameters:
+;Generated on 2025-02-09 03:29:21 from the following parameters:
 
 ;REF_M	1.5
 ;SLOPE_0	4
 ;SLOPE_1	8
 ;ADHESION	250
-;X_MULT	1.4
-;SLOPE_X	0.95
-;M_CLAMP	8
+;X_MULT	1.5
+;SLOPE_X	1.4
+;M_CLAMP	5
