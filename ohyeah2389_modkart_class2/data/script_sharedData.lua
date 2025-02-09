@@ -20,15 +20,19 @@ function sharedData.update()
     sharedData.setupWheel = ac.getScriptSetupValue('CUSTOM_SCRIPT_ITEM_2').value
     sharedData.setupNassau = ac.getScriptSetupValue('CUSTOM_SCRIPT_ITEM_3').value
     sharedData.setupFrontBumper = ac.getScriptSetupValue('CUSTOM_SCRIPT_ITEM_4').value
+    sharedData.setupSidepod = ac.getScriptSetupValue('CUSTOM_SCRIPT_ITEM_5').value
 
     ac.debug("sharedData.setupWheel", sharedData.setupWheel)
     ac.debug("sharedData.setupNassau", sharedData.setupNassau)
     ac.debug("sharedData.setupFrontBumper", sharedData.setupFrontBumper)
+    ac.debug("sharedData.setupSidepod", sharedData.setupSidepod)
 
     ac.store('modkart_c2_shared_' .. car.index .. '.wheel', sharedData.setupWheel)
     ac.store('modkart_c2_shared_' .. car.index .. '.nassau', sharedData.setupNassau)
     ac.store('modkart_c2_shared_' .. car.index .. '.frontBumper', sharedData.setupFrontBumper)
+    ac.store('modkart_c2_shared_' .. car.index .. '.sidepod', sharedData.setupSidepod)
 end
+
 
 
 

@@ -103,6 +103,28 @@ local function frontBumperSelection()
 end
 
 
+local function sidepodSelection()
+    local setupItem = ac.load('modkart_c2_shared_' .. car.index .. '.sidepod') or 0
+    local sidepodOTKM10_left = ac.findNodes("OTK M10 Sidepod Left")
+    local sidepodOTKM10_right = ac.findNodes("OTK M10 Sidepod Right")
+    local sidepodOTKM6_left = ac.findNodes("OTK M6 Sidepod Left")
+    local sidepodOTKM6_right = ac.findNodes("OTK M6 Sidepod Right")
+
+
+    if setupItem == 0 then
+        sidepodOTKM10_left:setVisible(true)
+        sidepodOTKM10_right:setVisible(true)
+        sidepodOTKM6_left:setVisible(false)
+        sidepodOTKM6_right:setVisible(false)
+    elseif setupItem == 1 then
+        sidepodOTKM10_left:setVisible(false)
+        sidepodOTKM10_right:setVisible(false)
+        sidepodOTKM6_left:setVisible(true)
+        sidepodOTKM6_right:setVisible(true)
+    end
+end
+
+
 local frameRateChecker = FrameRateChecker()
 local DriverAnimator = require("driver_animator")
 local KartAnimator = require("kart_animator")
@@ -152,4 +174,5 @@ function script.update(dt)
     wheelSelection()
     nassauSelection()
     frontBumperSelection()
+    sidepodSelection()
 end
