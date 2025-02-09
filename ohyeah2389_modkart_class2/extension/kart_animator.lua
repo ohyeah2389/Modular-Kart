@@ -90,7 +90,7 @@ function KartAnimator:initialize()
             flipped = false
         },
         nosecone = NodeAnimator{
-            nodeName = "Nassau Bouncer",
+            nodeName = "OTK M7 Nassau Bouncer",
             posMax = 0.0,
             posMin = -0.0,
             center = 0,
