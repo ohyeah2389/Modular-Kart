@@ -90,7 +90,7 @@ function KartAnimator:initialize()
             flipped = false
         },
         nosecone = NodeAnimator{
-            nodeName = "OTK M7 Nassau Bouncer",
+            nodeName = "Nassau Bouncer",
             posMax = 0.0,
             posMin = -0.0,
             center = 0,
@@ -100,7 +100,7 @@ function KartAnimator:initialize()
             springCoef = 0.0,
             forceMax = 100,
             constantForce = 0,
-            endstopRate = 80
+            endstopRate = 70
         }
     }
 
@@ -160,7 +160,7 @@ function KartAnimator:update(dt, angularAcceleration)
     local forceBumperRear = (car.acceleration.y * 0.2 * self.physics.bumperRear.physics.mass)
     local forceBumperRearAxial = (angularAcceleration.z * 0.03 * self.physics.bumperRearAxial.physics.mass)
     local forceBumperRearVertical = (car.acceleration.y * 0.1 * self.physics.bumperRearVertical.physics.mass)
-    local forceNosecone = (car.acceleration.x * 0.5)
+    local forceNosecone = (car.acceleration.x * 0.6)
 
     self.physics.sidepodRight:update(forceSidepodRight, vec3(1, 0, 0), vec3(0, 0, 0), dt)
     self.physics.sidepodLeft:update(forceSidepodLeft, vec3(1, 0, 0), vec3(0, 0, 0), dt)
