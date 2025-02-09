@@ -11,11 +11,11 @@ def generate_input_values():
     # 0 to 400 in steps of 20
     values.extend(np.arange(0, 401, 20))
     
-    # 400 to 1000 in steps of 100
-    values.extend(np.arange(400, 1001, 100))
+    # 400 to 3000 in steps of 100
+    values.extend(np.arange(400, 3001, 100))
     
-    # 1000 to 40000 in steps of 500
-    values.extend(np.arange(1000, 40001, 500))
+    # 3000 to 40000 in steps of 500
+    values.extend(np.arange(3000, 40001, 500))
     
     # Remove duplicates that might occur at transition points
     return sorted(list(set(values)))
