@@ -120,13 +120,13 @@
 39500	|	0.205
 40000	|	0.205
 
-;Generated on 2025-02-17 00:57:49 from the following parameters:
+;Generated on 2025-02-17 01:03:37 from the following parameters:
 
 ;REF_M	1.2
 ;SLOPE_0	4
 ;SLOPE_1	8
 ;ADHESION	200
-;X_MULT	0.8
+;X_MULT	0.9
 ;SLOPE_0_X	0.9
 ;SLOPE_1_X	1
 ;M_CLAMP	5
