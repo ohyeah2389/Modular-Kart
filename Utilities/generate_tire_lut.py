@@ -47,13 +47,14 @@ def calculate_longitudinal(x, params):
     slope_0 = params['SLOPE_0']
     slope_1 = params['SLOPE_1']
     x_mult = params['X_MULT']
-    slope_x = params['SLOPE_X']
+    slope_0_x = params['SLOPE_0_X']
+    slope_1_x = params['SLOPE_1_X']
     m_clamp = params['M_CLAMP']
     
-    exp_term = 2 / (1 + np.exp(-x * (slope_1/10000))) - 1
-    main_term = (20000 * exp_term) / (slope_1 * x)
+    exp_term = 2 / (1 + np.exp(-x * ((slope_1 * slope_1_x)/10000))) - 1
+    main_term = (20000 * exp_term) / ((slope_1 * slope_1_x) * x)
     
-    result = (ref_m * x_mult) + (adhesion/x) - ((slope_0 * slope_x)/10000) * x * main_term
+    result = (ref_m * x_mult) + (adhesion/x) - ((slope_0 * slope_0_x)/10000) * x * main_term
     return min(result, m_clamp)
 
 
@@ -92,7 +93,8 @@ def write_lut_file(filename, values, outputs, params):
         f.write(f"\n;SLOPE_1\t{params['SLOPE_1']}")
         f.write(f"\n;ADHESION\t{params['ADHESION']}")
         f.write(f"\n;X_MULT\t{params['X_MULT']}")
-        f.write(f"\n;SLOPE_X\t{params['SLOPE_X']}")
+        f.write(f"\n;SLOPE_0_X\t{params['SLOPE_0_X']}")
+        f.write(f"\n;SLOPE_1_X\t{params['SLOPE_1_X']}")
         f.write(f"\n;M_CLAMP\t{params['M_CLAMP']}")
 
 
