@@ -17,3 +17,15 @@ ADHESION = 250
 X_MULT = 1.5
 SLOPE_X = 1.4
 M_CLAMP = 5
+
+[base_path]
+path = "../ohyeah2389_modkart_class2/data"
+front_tire_lat_file = "tire_kart_sprint_front_lat.lut"
+front_tire_long_file = "tire_kart_sprint_front_long.lut"
+rear_tire_lat_file = "tire_kart_sprint_rear_lat.lut"
+rear_tire_long_file = "tire_kart_sprint_rear_long.lut"
+
+[ranges]
+by_twentys = 400
+by_hundreds = 3000
+by_fivehundreds = 40000

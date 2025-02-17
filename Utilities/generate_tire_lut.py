@@ -4,18 +4,18 @@ import tomli  # for reading TOML files
 from datetime import datetime
 
 
-def generate_input_values():
+def generate_input_values(ranges):
     """Generate the sequence of input values according to the specified increments"""
     values = []
     
     # 0 to 400 in steps of 20
-    values.extend(np.arange(0, 401, 20))
+    values.extend(np.arange(0, ranges['by_twentys'] + 1, 20))
     
     # 400 to 3000 in steps of 100
-    values.extend(np.arange(400, 3001, 100))
+    values.extend(np.arange(ranges['by_twentys'], ranges['by_hundreds'] + 1, 100))
     
     # 3000 to 40000 in steps of 500
-    values.extend(np.arange(3000, 40001, 500))
+    values.extend(np.arange(ranges['by_hundreds'], ranges['by_fivehundreds'] + 1, 500))
     
     # Remove duplicates that might occur at transition points
     return sorted(list(set(values)))
@@ -62,7 +62,7 @@ def load_parameters(config_file):
     try:
         with open(config_file, 'rb') as f:
             config = tomli.load(f)
-        return config['front_tire'], config['rear_tire']
+        return config['front_tire'], config['rear_tire'], config['base_path'], config['ranges']
     except FileNotFoundError:
         print(f"Error: Configuration file '{config_file}' not found.")
         print("Please ensure tire_parameters.toml exists in the same directory as this script.")
@@ -101,21 +101,18 @@ def generate_all_luts(config_file='tire_parameters.toml'):
     print("Tire LUT Generator")
     
     # Load parameters from TOML file
-    front_params, rear_params = load_parameters(config_file)
+    front_params, rear_params, base_path, ranges = load_parameters(config_file)
     print("\nLoaded parameters from", config_file)
     
     # Get input values
-    x_values = generate_input_values()
-    
-    # Fixed output path
-    base_path = "../ohyeah2389_modkart_class2/data"
+    x_values = generate_input_values(ranges)
     
     # Generate all four files
     tire_configs = [
-        ("front_lat", f"{base_path}/tire_kart_sprint_front_lat.lut", front_params, True),
-        ("front_long", f"{base_path}/tire_kart_sprint_front_long.lut", front_params, False),
-        ("rear_lat", f"{base_path}/tire_kart_sprint_rear_lat.lut", rear_params, True),
-        ("rear_long", f"{base_path}/tire_kart_sprint_rear_long.lut", rear_params, False)
+        ("front_lat", f"{base_path['path']}/{base_path['front_tire_lat_file']}", front_params, True),
+        ("front_long", f"{base_path['path']}/{base_path['front_tire_long_file']}", front_params, False),
+        ("rear_lat", f"{base_path['path']}/{base_path['rear_tire_lat_file']}", rear_params, True),
+        ("rear_long", f"{base_path['path']}/{base_path['rear_tire_long_file']}", rear_params, False)
     ]
     
     for name, filename, params, is_lateral in tire_configs:
