@@ -99,6 +99,9 @@ local function frontBumperSelection()
     elseif setupItem == 1 then
         frontBumperOTK:setVisible(false)
         frontBumperKG:setVisible(true)
+    elseif setupItem == 100 then
+        frontBumperOTK:setVisible(false)
+        frontBumperKG:setVisible(false)
     end
 end
 
@@ -121,6 +124,11 @@ local function sidepodSelection()
         sidepodOTKM10_right:setVisible(false)
         sidepodOTKM6_left:setVisible(true)
         sidepodOTKM6_right:setVisible(true)
+    elseif setupItem == 100 then
+        sidepodOTKM10_left:setVisible(false)
+        sidepodOTKM10_right:setVisible(false)
+        sidepodOTKM6_left:setVisible(false)
+        sidepodOTKM6_right:setVisible(false)
     end
 end
 
