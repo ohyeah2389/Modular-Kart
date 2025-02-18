@@ -49,7 +49,7 @@ function script.update()
         local relvelPitchNoiseMultiplier = helpers.mapRange(car.wheels[tireIndex - 1].speedDifference, 0, 10, 0, 0.4, true)
 
         local basePitch = tireIndex < 3 and helpers.mapRange(car.wheels[tireIndex - 1].ndSlip, 0, 4, 0.4, 0.1, true) or helpers.mapRange(car.wheels[tireIndex - 1].ndSlip, 0, 4, 0.3, 0.1, true)
-        local baseVolume = helpers.mapRange(car.wheels[tireIndex - 1].ndSlip, 0.01, 1.6, 0, 0.8, true)
+        local baseVolume = helpers.mapRange(car.wheels[tireIndex - 1].ndSlip, 0.015, 4.0, 0, 1, true)
 
         local loadedPitchSubtractor = helpers.mapRange(car.wheels[tireIndex - 1].load, 0, 2000, 0, 0.3, true)
         local loadedVolumeMultiplier = helpers.mapRange(car.wheels[tireIndex - 1].load, 0, 500, 0, 1, true) ^ 0.5
