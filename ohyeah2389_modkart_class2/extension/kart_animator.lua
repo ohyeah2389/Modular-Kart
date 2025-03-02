@@ -24,7 +24,7 @@ function KartAnimator:initialize()
             posMax = 0.008,
             posMin = -0.008,
             center = 0,
-            mass = 2,
+            mass = 1,
             frictionCoef = 0.25,
             staticFrictionCoef = 0,
             springCoef = 0,
@@ -38,7 +38,7 @@ function KartAnimator:initialize()
             posMax = 0.008,
             posMin = -0.008,
             center = 0,
-            mass = 2,
+            mass = 1,
             frictionCoef = 0.25,
             staticFrictionCoef = 0,
             springCoef = 0,
@@ -89,7 +89,7 @@ function KartAnimator:initialize()
             endstopRate = 50,
             flipped = false
         },
-        nosecone = NodeAnimator{
+        nassau = NodeAnimator{
             nodeName = "Nassau Bouncer",
             posMax = 0.0,
             posMin = -0.0,
@@ -101,6 +101,19 @@ function KartAnimator:initialize()
             forceMax = 100,
             constantForce = 0,
             endstopRate = 70
+        },
+        nosecone = NodeAnimator{
+            nodeName = "NoseconeBouncer",
+            posMax = 0.0,
+            posMin = -0.0,
+            center = 0,
+            mass = 3,
+            frictionCoef = 0.3,
+            staticFrictionCoef = 0,
+            springCoef = 0.0,
+            forceMax = 100,
+            constantForce = 0,
+            endstopRate = 120
         }
     }
 
@@ -153,21 +166,21 @@ end
 
 
 function KartAnimator:update(dt, angularAcceleration)
-    local forceSidepodRight = (car.acceleration.y * 0.1 * self.physics.sidepodRight.physics.mass) 
-        + (angularAcceleration.z * 0.01 * self.physics.sidepodRight.physics.mass)
-    local forceSidepodLeft = (car.acceleration.y * 0.1 * self.physics.sidepodLeft.physics.mass) 
-        + (angularAcceleration.z * -0.01 * self.physics.sidepodLeft.physics.mass)
+    local forceSidepodRight = (car.acceleration.y * 0.1 * self.physics.sidepodRight.physics.mass) + (angularAcceleration.z * 0.01 * self.physics.sidepodRight.physics.mass)
+    local forceSidepodLeft = (car.acceleration.y * 0.1 * self.physics.sidepodLeft.physics.mass) + (angularAcceleration.z * -0.01 * self.physics.sidepodLeft.physics.mass)
     local forceBumperRear = (car.acceleration.y * 0.2 * self.physics.bumperRear.physics.mass)
     local forceBumperRearAxial = (angularAcceleration.z * 0.03 * self.physics.bumperRearAxial.physics.mass)
     local forceBumperRearVertical = (car.acceleration.y * 0.1 * self.physics.bumperRearVertical.physics.mass)
-    local forceNosecone = (car.acceleration.x * 0.6)
+    local forceNassau = (car.acceleration.x * 0.6)
+    local forceNosecone = (car.acceleration.y * -0.2)
 
     self.physics.sidepodRight:update(forceSidepodRight, vec3(1, 0, 0), vec3(0, 0, 0), dt)
     self.physics.sidepodLeft:update(forceSidepodLeft, vec3(1, 0, 0), vec3(0, 0, 0), dt)
     self.physics.bumperRear:update(forceBumperRear, vec3(0, 1, 0), vec3(0, 0, 0), dt)
     self.physics.bumperRearAxial:update(forceBumperRearAxial, vec3(1, 0, 0), vec3(0, 0, 0), dt)
     self.physics.bumperRearVertical:update(forceBumperRearVertical, vec3(0, 0, 0), vec3(0, 0, 1), dt)
-    self.physics.nosecone:update(forceNosecone, vec3(1, 0, 0), vec3(0, 0, 0), dt)
+    self.physics.nassau:update(forceNassau, vec3(1, 0, 0), vec3(0, 0, 0), dt)
+    self.physics.nosecone:update(forceNosecone, vec3(0, 0, 1), vec3(0, 0, 0), dt)
 
     self.physics.brakeDisc.posMax = helpers.mapRange(car.brake, 0, 0.2, 1, 0.1, true)
     self.physics.brakeDisc.posMin = helpers.mapRange(car.brake, 0, 0.2, -1, -0.1, true)
