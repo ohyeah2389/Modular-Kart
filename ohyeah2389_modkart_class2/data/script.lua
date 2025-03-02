@@ -56,7 +56,7 @@ end)
 
 
 local function brakeAutoHold()
-    if game.car_cphys.speedKmh < config.misc.brakeAutoHold.speed and game.car_cphys.gas == 0 then
+    if game.car_cphys.speedKmh < config.misc.brakeAutoHold.speed and game.car_cphys.gas < 0.01 then
         ac.overrideBrakesTorque(2, config.misc.brakeAutoHold.torque, config.misc.brakeAutoHold.torque)
         ac.overrideBrakesTorque(3, config.misc.brakeAutoHold.torque, config.misc.brakeAutoHold.torque)
     else
