@@ -13,7 +13,7 @@ function DriverAnimator:initialize()
             mass = 2,
             frictionCoef = 0.4,
             springCoef = 10,
-            forceMax = 20,
+            forceMax = 30,
             constantForce = 0,
             endstopRate = 30
         },
@@ -25,9 +25,45 @@ function DriverAnimator:initialize()
             mass = 3,
             frictionCoef = 0.3,
             springCoef = 30,
-            forceMax = 20,
+            forceMax = 30,
             constantForce = 5,
             endstopRate = 40
+        },
+
+        neckTurn = Physics{
+            posMax = 0.2,
+            posMin = -0.2,
+            center = 0,
+            mass = 1,
+            frictionCoef = 0.6,
+            springCoef = 5,
+            forceMax = 30,
+            constantForce = 0,
+            endstopRate = 10
+        },
+
+        neckTiltLat = Physics{
+            posMax = 0.8,
+            posMin = -0.8,
+            center = 0,
+            mass = 2,
+            frictionCoef = 0.4,
+            springCoef = 10,
+            forceMax = 30,
+            constantForce = 0,
+            endstopRate = 60
+        },
+
+        neckTiltLong = Physics{
+            posMax = 1,
+            posMin = -1,
+            center = 0,
+            mass = 1.5,
+            frictionCoef = 0.6,
+            springCoef = 30,
+            forceMax = 100,
+            constantForce = 0,
+            endstopRate = 50
         },
 
         legL = Physics{
@@ -94,6 +130,8 @@ function DriverAnimator:initialize()
     -- Node configuration
     self.nodes = {
         model = { node = "DRIVER:DRIVER" },
+        neck = { node = "DRIVER:RIG_Nek" },
+        head = { node = "DRIVER:RIG_Head" },
         arm = {
             L = {
                 clavicle = { node = "DRIVER:RIG_Clave_L" },
@@ -219,6 +257,18 @@ function DriverAnimator:initialize()
         end
     end
 
+    -- Initialize neck node
+    self.nodes.neck.node = ac.findNodes(self.nodes.neck.node)
+    self.nodes.neck.node:storeCurrentTransformation()
+    self.nodes.neck.forward = self.nodes.neck.node:getLook()
+    self.nodes.neck.up = self.nodes.neck.node:getUp()
+
+    -- Initialize head node
+    self.nodes.head.node = ac.findNodes(self.nodes.head.node)
+    self.nodes.head.node:storeCurrentTransformation()
+    self.nodes.head.forward = self.nodes.head.node:getLook()
+    self.nodes.head.up = self.nodes.head.node:getUp()
+    
     -- Animation states
     self.states = {
         handUp = {
@@ -303,6 +353,10 @@ function DriverAnimator:update(dt, antiResetAdder)
     local legLAnimPos = self.physicsObjects.legL:step(legLForce, dt)
     local legRAnimPos = self.physicsObjects.legR:step(legRForce, dt)
 
+    local neckTurnAnimPos = self.physicsObjects.neckTurn:step(car.steer * 0.05, dt)
+    local neckTiltLatAnimPos = self.physicsObjects.neckTiltLat:step((car.acceleration.x * 0.65) + (car.steer * 0.035 * helpers.mapRange(math.abs(car.speedKmh), 0, 80, 0.1, 1, true)), dt)
+    local neckTiltLongAnimPos = self.physicsObjects.neckTiltLong:step((car.acceleration.z * 1) + (car.acceleration.y * -1), dt)
+
     local legLPos = legLAnimPos
     local legRPos = legRAnimPos
 
@@ -327,6 +381,12 @@ function DriverAnimator:update(dt, antiResetAdder)
     self.nodes.foot.R.node:setOrientation(
         self.nodes.foot.R.forward + vec3(0, 0, (car.gas * 0.32) + 0.05),
         self.nodes.foot.R.up
+    )
+
+    -- Update neck
+    self.nodes.head.node:setOrientation(
+        self.nodes.head.forward + vec3(neckTurnAnimPos, neckTiltLongAnimPos * -2, 0),
+        self.nodes.head.up + vec3(neckTiltLatAnimPos, 0, neckTiltLongAnimPos * -2)
     )
 
     -- Update shins
