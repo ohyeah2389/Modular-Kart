@@ -4,20 +4,20 @@
 REF_M	=	1.8
 SLOPE_0	=	4.5
 SLOPE_1	=	7
-ADHESION	=	100
-X_MULT	=	1.4
-SLOPE_0_X	=	0.9
-SLOPE_1_X	=	1
+ADHESION	=	50
+X_MULT	=	1.6
+SLOPE_0_X	=	0.7
+SLOPE_1_X	=	1.25
 M_CLAMP	=	5
 
 [rear_tire]
 REF_M	=	1.8
 SLOPE_0	=	3.5
 SLOPE_1	=	6
-ADHESION	=	100
-X_MULT	=	1.4
-SLOPE_0_X	=	0.9
-SLOPE_1_X	=	1
+ADHESION	=	65
+X_MULT	=	1.6
+SLOPE_0_X	=	0.7
+SLOPE_1_X	=	1.25
 M_CLAMP	=	5
 
 [base_path]
