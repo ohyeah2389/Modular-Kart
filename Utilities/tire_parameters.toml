@@ -2,22 +2,22 @@
 
 [front_tire]
 REF_M	=	2.0
-SLOPE_0	=	4
-SLOPE_1	=	7
+SLOPE_0	=	3.2
+SLOPE_1	=	6
 ADHESION	=	10
-X_MULT	=	1.8
-SLOPE_0_X	=	2
-SLOPE_1_X	=	1
+X_MULT	=	1.7
+SLOPE_0_X	=	1.5
+SLOPE_1_X	=	1.2
 M_CLAMP	=	5
 
 [rear_tire]
 REF_M	=	2.0
-SLOPE_0	=	3
+SLOPE_0	=	2.8
 SLOPE_1	=	6
-ADHESION	=	20
-X_MULT	=	1.8
-SLOPE_0_X	=	2
-SLOPE_1_X	=	1
+ADHESION	=	10
+X_MULT	=	1.7
+SLOPE_0_X	=	1.5
+SLOPE_1_X	=	1.2
 M_CLAMP	=	5
 
 [base_path]
