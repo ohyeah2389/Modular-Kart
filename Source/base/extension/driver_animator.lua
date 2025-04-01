@@ -347,17 +347,27 @@ stickArm1:storeCurrentTransformation()
 stickArm2:storeCurrentTransformation()
 stickTip:storeCurrentTransformation()
 
+local driverArm_R_clavicle = ac.findNodes("DRIVER:RIG_Clave_R")
+local driverArm_R_upper = ac.findNodes("DRIVER:RIG_Arm_R")
+local driverArm_R_forearm = ac.findNodes("DRIVER:RIG_ForeArm_R")
+local driverArm_R_forearmEnd = ac.findNodes("DRIVER:RIG_ForeArm_END_R")
 
+driverArm_R_clavicle:storeCurrentTransformation()
+driverArm_R_upper:storeCurrentTransformation()
+driverArm_R_forearm:storeCurrentTransformation()
+driverArm_R_forearmEnd:storeCurrentTransformation()
 
 
 function DriverAnimator:update(dt, antiResetAdder)
-    local target_x = 0 + math.sin(sim.time * 0.005) * 0.1
-    local target_y = 1.3 + math.sin(sim.time * 0.002) * 0.3
-    local target_z = 0.2 + math.sin(sim.time * 0.007) * 0.05
+    local target_x = 0 + math.sin(sim.time * 0.005 + math.pi/2) * 0.1
+    local target_y = 1.4 + math.sin(sim.time * 0.005) * 0.1
+    local target_z = 0.25 + math.sin(sim.time * 0.007) * 0.0
     
     local targetPos = vec3(target_x, target_y, target_z)
 
-    ikSolver(stickBase, stickArm1, stickArm2, stickTip, targetPos, 10, 0.0001)
+    stickBase:setPosition(vec3(0 + car.steer * 0.005, 1, 0))
+
+    ikSolver(stickBase, stickArm1, stickArm2, stickTip, targetPos, 400, 0.0001)
     
     self:updateStates(dt)
 
@@ -589,6 +599,15 @@ function DriverAnimator:update(dt, antiResetAdder)
             end
         end
     end
+
+    -- Driver ik test
+    local armTarget_x = 0 + math.sin(sim.time * 0.005 + math.pi/2) * 0.1
+    local armTarget_y = 1.4 + math.sin(sim.time * 0.005) * 0.1
+    local armTarget_z = 0.25 + math.sin(sim.time * 0.007) * 0.0
+    
+    local armTargetPos = vec3(armTarget_x, armTarget_y, armTarget_z)
+
+    ikSolver(driverArm_R_clavicle, driverArm_R_upper, driverArm_R_forearm, driverArm_R_forearmEnd, armTargetPos, 400, 0.0001, "Y_Fwd_Z_Up", "Y_Fwd_Z_Up")
 end
 
 return DriverAnimator
