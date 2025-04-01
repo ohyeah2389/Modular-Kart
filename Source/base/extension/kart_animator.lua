@@ -31,7 +31,8 @@ function KartAnimator:initialize()
             forceMax = 50,
             constantForce = -0.2,
             endstopRate = 30,
-            flipped = false
+            flipped = false,
+            vibration = 0.05
         },
         sidepodLeft = NodeAnimator{
             nodeName = "SidepodBouncerLeft",
@@ -45,7 +46,8 @@ function KartAnimator:initialize()
             forceMax = 50,
             constantForce = -0.2,
             endstopRate = 30,
-            flipped = true
+            flipped = true,
+            vibration = 0.04
         },
         bumperRear = NodeAnimator{
             nodeName = "RearBumperPlastic",
@@ -59,7 +61,8 @@ function KartAnimator:initialize()
             forceMax = 50,
             constantForce = -0.5,
             endstopRate = 50,
-            flipped = false
+            flipped = false,
+            vibration = 0.05
         },
         bumperRearVertical = NodeAnimator{
             nodeName = "RearBumperBracket",
@@ -100,7 +103,8 @@ function KartAnimator:initialize()
             springCoef = 0.0,
             forceMax = 100,
             constantForce = 0,
-            endstopRate = 70
+            endstopRate = 70,
+            vibration = 0.05
         },
         nosecone = NodeAnimator{
             nodeName = "NoseconeBouncer",
@@ -113,7 +117,8 @@ function KartAnimator:initialize()
             springCoef = 0.0,
             forceMax = 100,
             constantForce = 0,
-            endstopRate = 120
+            endstopRate = 120,
+            vibration = 0.1
         }
     }
 

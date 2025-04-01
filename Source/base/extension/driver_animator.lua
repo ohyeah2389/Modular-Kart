@@ -1,12 +1,13 @@
 local helpers = require("helpers")
 local Physics = require("physics_classes")
+local ikSolver = require("ik")
 
 local DriverAnimator = class("DriverAnimator")
 
 function DriverAnimator:initialize()
     -- Physics configuration
     self.physicsObjects = {
-        bodyLat = Physics{
+        bodyLat = Physics {
             posMax = 0.85,
             posMin = 0.15,
             center = 0.5,
@@ -18,7 +19,7 @@ function DriverAnimator:initialize()
             endstopRate = 30
         },
 
-        bodyVert = Physics{
+        bodyVert = Physics {
             posMax = 0.9,
             posMin = 0.1,
             center = 0.5,
@@ -30,7 +31,7 @@ function DriverAnimator:initialize()
             endstopRate = 40
         },
 
-        neckTurn = Physics{
+        neckTurn = Physics {
             posMax = 0.2,
             posMin = -0.2,
             center = 0,
@@ -42,7 +43,7 @@ function DriverAnimator:initialize()
             endstopRate = 10
         },
 
-        neckTiltLat = Physics{
+        neckTiltLat = Physics {
             posMax = 0.8,
             posMin = -0.8,
             center = 0,
@@ -54,7 +55,7 @@ function DriverAnimator:initialize()
             endstopRate = 60
         },
 
-        neckTiltLong = Physics{
+        neckTiltLong = Physics {
             posMax = 1,
             posMin = -1,
             center = 0,
@@ -66,7 +67,7 @@ function DriverAnimator:initialize()
             endstopRate = 50
         },
 
-        legL = Physics{
+        legL = Physics {
             posMax = 0.8,
             posMin = 0.2,
             center = 0.5,
@@ -78,7 +79,7 @@ function DriverAnimator:initialize()
             endstopRate = 50
         },
 
-        legR = Physics{
+        legR = Physics {
             posMax = 0.8,
             posMin = 0.2,
             center = 0.5,
@@ -91,7 +92,7 @@ function DriverAnimator:initialize()
         },
 
         handPhysics = {
-            x = Physics{
+            x = Physics {
                 posMax = 1,
                 posMin = -1,
                 center = 0,
@@ -102,7 +103,7 @@ function DriverAnimator:initialize()
                 constantForce = 0,
                 endstopRate = 25
             },
-            y = Physics{
+            y = Physics {
                 posMax = 1,
                 posMin = -1,
                 center = 0,
@@ -113,7 +114,7 @@ function DriverAnimator:initialize()
                 constantForce = 0,
                 endstopRate = 25
             },
-            z = Physics{
+            z = Physics {
                 posMax = 1,
                 posMin = -1,
                 center = 0,
@@ -167,7 +168,7 @@ function DriverAnimator:initialize()
                     node2 = { node = "DRIVER:HAND_L_Thumb2", forward = nil, up = nil },
                     node3 = { node = "DRIVER:HAND_L_Thumb3", forward = nil, up = nil }
                 },
-                index = { 
+                index = {
                     node1 = { node = "DRIVER:HAND_Index1", forward = nil, up = nil },
                     node2 = { node = "DRIVER:HAND_Index2", forward = nil, up = nil },
                     node3 = { node = "DRIVER:HAND_Index3", forward = nil, up = nil }
@@ -194,7 +195,7 @@ function DriverAnimator:initialize()
                     node2 = { node = "DRIVER:HAND_R_Thumb2", forward = nil, up = nil },
                     node3 = { node = "DRIVER:HAND_R_Thumb3", forward = nil, up = nil }
                 },
-                index = { 
+                index = {
                     node1 = { node = "DRIVER:HAND_Index4", forward = nil, up = nil },
                     node2 = { node = "DRIVER:HAND_Index5", forward = nil, up = nil },
                     node3 = { node = "DRIVER:HAND_Index6", forward = nil, up = nil }
@@ -268,7 +269,7 @@ function DriverAnimator:initialize()
     self.nodes.head.node:storeCurrentTransformation()
     self.nodes.head.forward = self.nodes.head.node:getLook()
     self.nodes.head.up = self.nodes.head.node:getUp()
-    
+
     -- Animation states
     self.states = {
         handUp = {
@@ -282,7 +283,6 @@ function DriverAnimator:initialize()
         }
     }
 end
-
 
 function DriverAnimator:setState(stateName, active, held)
     if self.states[stateName] then
@@ -308,7 +308,6 @@ function DriverAnimator:setState(stateName, active, held)
         end
     end
 end
-
 
 function DriverAnimator:updateStates(dt)
     for stateName, state in pairs(self.states) do
@@ -337,8 +336,29 @@ function DriverAnimator:updateStates(dt)
     end
 end
 
+-- ik test
+local stickBase = ac.findNodes("Stick1")
+local stickArm1 = ac.findNodes("Stick2") -- Upper arm / Shoulder joint
+local stickArm2 = ac.findNodes("Stick3") -- Forearm / Elbow joint
+local stickTip = ac.findNodes("StickTip") -- End effector
+
+stickBase:storeCurrentTransformation()
+stickArm1:storeCurrentTransformation()
+stickArm2:storeCurrentTransformation()
+stickTip:storeCurrentTransformation()
+
+
+
 
 function DriverAnimator:update(dt, antiResetAdder)
+    local target_x = 0 + math.sin(sim.time * 0.005) * 0.1
+    local target_y = 1.3 + math.sin(sim.time * 0.002) * 0.3
+    local target_z = 0.2 + math.sin(sim.time * 0.007) * 0.05
+    
+    local targetPos = vec3(target_x, target_y, target_z)
+
+    ikSolver(stickBase, stickArm1, stickArm2, stickTip, targetPos, 10, 0.0001)
+    
     self:updateStates(dt)
 
     local breathSine = math.sin(sim.time * 0.002)
@@ -354,8 +374,10 @@ function DriverAnimator:update(dt, antiResetAdder)
     local legRAnimPos = self.physicsObjects.legR:step(legRForce, dt)
 
     local neckTurnAnimPos = self.physicsObjects.neckTurn:step(car.steer * 0.05, dt)
-    local neckTiltLatAnimPos = self.physicsObjects.neckTiltLat:step((car.acceleration.x * 0.65) + (car.steer * 0.035 * helpers.mapRange(math.abs(car.speedKmh), 0, 80, 0.1, 1, true)), dt)
-    local neckTiltLongAnimPos = self.physicsObjects.neckTiltLong:step((car.acceleration.z * 1) + (car.acceleration.y * -1), dt)
+    local neckTiltLatAnimPos = self.physicsObjects.neckTiltLat:step(
+    (car.acceleration.x * 0.65) + (car.steer * 0.035 * helpers.mapRange(math.abs(car.speedKmh), 0, 80, 0.1, 1, true)), dt)
+    local neckTiltLongAnimPos = self.physicsObjects.neckTiltLong:step(
+    (car.acceleration.z * 1) + (car.acceleration.y * -1), dt)
 
     local legLPos = legLAnimPos
     local legRPos = legRAnimPos
@@ -370,8 +392,12 @@ function DriverAnimator:update(dt, antiResetAdder)
     ac.debug("legR force", self.physicsObjects.legR.force)
 
     -- Update vertical and lateral baked animations
-    self.nodes.model.node:setAnimation("../animations/latG.ksanim", math.clamp(self.physicsObjects.bodyLat:step(bodyLatForce, dt), 0.02, 0.98) + (breathSineHarmonic * 0.005) + ((antiResetAdder - 0.5) * 0.005))
-    self.nodes.model.node:setAnimation("../animations/vertG.ksanim", math.clamp(self.physicsObjects.bodyVert:step(bodyVertForce, dt), 0.02, 0.98) + (breathSine * 0.01) + ((antiResetAdder - 0.5) * 0.005))
+    self.nodes.model.node:setAnimation("../animations/latG.ksanim",
+        math.clamp(self.physicsObjects.bodyLat:step(bodyLatForce, dt), 0.02, 0.98) + (breathSineHarmonic * 0.005) +
+        ((antiResetAdder - 0.5) * 0.005))
+    self.nodes.model.node:setAnimation("../animations/vertG.ksanim",
+        math.clamp(self.physicsObjects.bodyVert:step(bodyVertForce, dt), 0.02, 0.98) + (breathSine * 0.01) +
+        ((antiResetAdder - 0.5) * 0.005))
 
     -- Update feet
     self.nodes.foot.L.node:setOrientation(
@@ -391,11 +417,14 @@ function DriverAnimator:update(dt, antiResetAdder)
 
     -- Update shins
     self.nodes.shin.L.node:setOrientation(
-        self.nodes.shin.L.forward + vec3(0 + (legLPos * 0.2), 0, (car.brake * 0.05) - 0.1 + ((self.physicsObjects.bodyVert.position - 0.5) * -0.2)),
+        self.nodes.shin.L.forward +
+        vec3(0 + (legLPos * 0.2), 0, (car.brake * 0.05) - 0.1 + ((self.physicsObjects.bodyVert.position - 0.5) * -0.2)),
         self.nodes.shin.L.up
     )
     self.nodes.shin.R.node:setOrientation(
-        self.nodes.shin.R.forward + vec3(0 + (legRPos * 0.2), 0 - (legRPos * 0.2), (car.gas * 0.2) - 0.2 + ((self.physicsObjects.bodyVert.position - 0.5) * -0.2)),
+        self.nodes.shin.R.forward +
+        vec3(0 + (legRPos * 0.2), 0 - (legRPos * 0.2),
+            (car.gas * 0.2) - 0.2 + ((self.physicsObjects.bodyVert.position - 0.5) * -0.2)),
         self.nodes.shin.R.up
     )
 
@@ -410,7 +439,7 @@ function DriverAnimator:update(dt, antiResetAdder)
     )
 
     -- Update finger idle animations
-    local fingerNames = {"thumb", "index", "middle", "ring", "pinkie"}
+    local fingerNames = { "thumb", "index", "middle", "ring", "pinkie" }
     for i, fingerName in ipairs(fingerNames) do
         local timeOffset = (i - 1) * -80
         local steeringScaleOut = helpers.mapRange(math.abs(car.steer), 0, 60, 1.5, 0, true)
@@ -424,22 +453,24 @@ function DriverAnimator:update(dt, antiResetAdder)
             local thumbScalar = 0.5
 
             if fingerName == "thumb" then
-                self.nodes.fingers.L[fingerName]["node"..j].node:setOrientation(
-                    self.nodes.fingers.L[fingerName]["node"..j].forward + vec3(0, fingerWiggleLeft * -wiggleAmount * thumbScalar, 0),
-                    self.nodes.fingers.L[fingerName]["node"..j].up
+                self.nodes.fingers.L[fingerName]["node" .. j].node:setOrientation(
+                    self.nodes.fingers.L[fingerName]["node" .. j].forward +
+                    vec3(0, fingerWiggleLeft * -wiggleAmount * thumbScalar, 0),
+                    self.nodes.fingers.L[fingerName]["node" .. j].up
                 )
-                self.nodes.fingers.R[fingerName]["node"..j].node:setOrientation(
-                    self.nodes.fingers.R[fingerName]["node"..j].forward + vec3(0, fingerWiggleRight * -wiggleAmount * thumbScalar, 0),
-                    self.nodes.fingers.R[fingerName]["node"..j].up
+                self.nodes.fingers.R[fingerName]["node" .. j].node:setOrientation(
+                    self.nodes.fingers.R[fingerName]["node" .. j].forward +
+                    vec3(0, fingerWiggleRight * -wiggleAmount * thumbScalar, 0),
+                    self.nodes.fingers.R[fingerName]["node" .. j].up
                 )
             else
-                self.nodes.fingers.L[fingerName]["node"..j].node:setOrientation(
-                    self.nodes.fingers.L[fingerName]["node"..j].forward,
-                    self.nodes.fingers.L[fingerName]["node"..j].up + vec3(fingerWiggleLeft * wiggleAmount, 0, 0)
+                self.nodes.fingers.L[fingerName]["node" .. j].node:setOrientation(
+                    self.nodes.fingers.L[fingerName]["node" .. j].forward,
+                    self.nodes.fingers.L[fingerName]["node" .. j].up + vec3(fingerWiggleLeft * wiggleAmount, 0, 0)
                 )
-                self.nodes.fingers.R[fingerName]["node"..j].node:setOrientation(
-                    self.nodes.fingers.R[fingerName]["node"..j].forward,
-                    self.nodes.fingers.R[fingerName]["node"..j].up + vec3(fingerWiggleRight * -wiggleAmount, 0, 0)
+                self.nodes.fingers.R[fingerName]["node" .. j].node:setOrientation(
+                    self.nodes.fingers.R[fingerName]["node" .. j].forward,
+                    self.nodes.fingers.R[fingerName]["node" .. j].up + vec3(fingerWiggleRight * -wiggleAmount, 0, 0)
                 )
             end
         end
@@ -508,8 +539,11 @@ function DriverAnimator:update(dt, antiResetAdder)
                 -- First phase: Blend from current position to base position
                 local initialBlend = helpers.mapRange(progress, 0, transitionPoint, 0, 1)
                 if blendIntermediateOffsets[partName] then
-                    blendedForward = currentForward + (node.baseForward - currentForward + (blendIntermediateOffsets[partName].forward * transitionScalar)) * initialBlend
-                    blendedUp = currentUp + (node.baseUp - currentUp + (blendIntermediateOffsets[partName].up * transitionScalar)) * initialBlend
+                    blendedForward = currentForward +
+                    (node.baseForward - currentForward + (blendIntermediateOffsets[partName].forward * transitionScalar)) *
+                    initialBlend
+                    blendedUp = currentUp +
+                    (node.baseUp - currentUp + (blendIntermediateOffsets[partName].up * transitionScalar)) * initialBlend
                 else
                     blendedForward = currentForward + (node.baseForward - currentForward) * initialBlend
                     blendedUp = currentUp + (node.baseUp - currentUp) * initialBlend
@@ -518,9 +552,11 @@ function DriverAnimator:update(dt, antiResetAdder)
                 -- Second phase: Blend from intermediate/base position to raised position
                 local raisedBlend = helpers.mapRange(progress, transitionPoint, 1, 0, 1)
                 if blendIntermediateOffsets[partName] then
-                    local intermediateForward = node.baseForward + (blendIntermediateOffsets[partName].forward * transitionScalar)
+                    local intermediateForward = node.baseForward +
+                    (blendIntermediateOffsets[partName].forward * transitionScalar)
                     local intermediateUp = node.baseUp + (blendIntermediateOffsets[partName].up * transitionScalar)
-                    blendedForward = intermediateForward + ((node.baseForward + partTarget.forward - intermediateForward) * raisedBlend)
+                    blendedForward = intermediateForward +
+                    ((node.baseForward + partTarget.forward - intermediateForward) * raisedBlend)
                     blendedUp = intermediateUp + ((node.baseUp + partTarget.up - intermediateUp) * raisedBlend)
                 else
                     blendedForward = node.baseForward + (partTarget.forward * raisedBlend)
@@ -555,4 +591,4 @@ function DriverAnimator:update(dt, antiResetAdder)
     end
 end
 
-return DriverAnimator 
+return DriverAnimator
