@@ -360,14 +360,40 @@ driverArm_R_forearmEnd:storeCurrentTransformation()
 
 function DriverAnimator:update(dt, antiResetAdder)
     local target_x = 0 + math.sin(sim.time * 0.005 + math.pi/2) * 0.1
-    local target_y = 1.4 + math.sin(sim.time * 0.005) * 0.1
-    local target_z = 0.25 + math.sin(sim.time * 0.007) * 0.0
+    local target_y = 0.8 + math.sin(sim.time * 0.005) * 0.1
+    local target_z = 0 + math.sin(sim.time * 0.007) * 0.0
     
     local targetPos = vec3(target_x, target_y, target_z)
 
     stickBase:setPosition(vec3(0 + car.steer * 0.005, 1, 0))
 
-    ikSolver(stickBase, stickArm1, stickArm2, stickTip, targetPos, 400, 0.0001)
+    -- Call ikSolver with a parameter table for the test stick
+    ikSolver({
+        baseRef = stickBase,
+        arm1Ref = stickArm1,
+        arm2Ref = stickArm2,
+        tipRef = stickTip,
+        targetPosPlatform = targetPos,
+        iterations = 400,
+        tolerance = 0.0001,
+        arm1Convention = "Z_Fwd_Y_Up",
+        arm2Convention = "Z_Fwd_Y_Up",
+        treeDepth = 2 -- Default, but explicit here
+    })
+
+    -- Call ikSolver with a parameter table for the driver arm
+    ikSolver({
+        baseRef = driverArm_R_clavicle,
+        arm1Ref = driverArm_R_upper,
+        arm2Ref = driverArm_R_forearm,
+        tipRef = driverArm_R_forearmEnd,
+        targetPosPlatform = targetPos,
+        iterations = 400,
+        tolerance = 0.0001,
+        arm1Convention = "Y_Fwd_Z_Up",
+        arm2Convention = "Y_Fwd_Z_Up",
+        treeDepth = 6
+    })
     
     self:updateStates(dt)
 
@@ -599,15 +625,6 @@ function DriverAnimator:update(dt, antiResetAdder)
             end
         end
     end
-
-    -- Driver ik test
-    local armTarget_x = 0 + math.sin(sim.time * 0.005 + math.pi/2) * 0.1
-    local armTarget_y = 1.4 + math.sin(sim.time * 0.005) * 0.1
-    local armTarget_z = 0.25 + math.sin(sim.time * 0.007) * 0.0
-    
-    local armTargetPos = vec3(armTarget_x, armTarget_y, armTarget_z)
-
-    ikSolver(driverArm_R_clavicle, driverArm_R_upper, driverArm_R_forearm, driverArm_R_forearmEnd, armTargetPos, 400, 0.0001, "Y_Fwd_Z_Up", "Y_Fwd_Z_Up")
 end
 
 return DriverAnimator

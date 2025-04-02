@@ -1,372 +1,330 @@
---- Creates a 4x4 WORLD transformation matrix at a position, oriented along a primary axis.
--- **Builds a standard matrix: Local +Z axis aligns with the 'forward' direction (target - origin),
--- Local +Y aligns close to 'worldUpHint', and Local +X aligns with the 'right' direction.**
+--- Creates a 4x4 WORLD transformation matrix at a position, oriented towards a target.
+-- Builds a standard matrix suitable for world space:
+--   - Local +Z axis aligns with the 'forward' direction (target - origin).
+--   - Local +Y aligns as close as possible to 'worldUpHint'.
+--   - Local +X aligns with the 'right' direction (orthogonal to forward and up).
 -- @param originWorld vec3 The desired world origin for the matrix.
 -- @param lookTargetWorld vec3 The world point to look towards.
--- @param worldUpHint vec3? A world-space up vector hint (default: 0,1,0).
--- @param epsilon number? Small value for float comparisons.
--- @return mat4x4 The calculated world transformation matrix.
+-- @param worldUpHint vec3? A world-space up vector hint (default: {0,1,0}). Used to stabilize the 'up' direction.
+-- @param epsilon number? Small value for float comparisons (default: 1e-6).
+-- @return mat4x4 The calculated world transformation matrix, or identity if origin and target are too close.
 local function buildWorldTransformLookingAt(originWorld, lookTargetWorld, worldUpHint, epsilon)
-    local forward = lookTargetWorld - originWorld
     epsilon = epsilon or 1e-6
+    local forward = lookTargetWorld - originWorld
+
+    -- Handle cases where origin and target are coincident
     if forward:lengthSquared() < epsilon * epsilon then
-        print("IK WARN buildWorldTransformLookingAt: forward vector too small!", forward)
+        -- Don't print warnings in the helper, let the main function decide if it's an issue.
+        -- print("IK WARN buildWorldTransformLookingAt: forward vector too small!", forward)
         local m = mat4x4.identity()
         m.position = originWorld
         return m
     end
-    forward = math.normalize(forward)
+    forward:normalize()
+
+    -- Calculate a robust 'up' vector, avoiding gimbal lock with the forward vector
     local temp_up = worldUpHint or vec3(0, 1, 0)
     local dotProduct = math.dot(forward, temp_up)
-    if math.abs(dotProduct) > (1.0 - epsilon) then
+    if math.abs(dotProduct) > (1.0 - epsilon) then -- If forward and hint are nearly parallel
+        -- Try world X axis as hint
         temp_up = vec3(1, 0, 0)
         dotProduct = math.dot(forward, temp_up)
-        if math.abs(dotProduct) > (1.0 - epsilon) then
+        if math.abs(dotProduct) > (1.0 - epsilon) then -- If forward is also parallel to world X
+            -- Use world Z axis as hint
             temp_up = vec3(0, 0, 1)
         end
     end
-    local right = math.normalize(math.cross(temp_up, forward))
-    local up = math.normalize(math.cross(forward, right))
-    if right:lengthSquared() < epsilon or up:lengthSquared() < epsilon then
-        print("IK WARN buildWorldTransformLookingAt: right or up vector collapsed!", right, up)
+
+    -- Calculate orthogonal right and final up vectors
+    local right = math.cross(temp_up, forward)
+    if right:lengthSquared() < epsilon * epsilon then
+        -- Handle potential collapse if temp_up and forward were still parallel (shouldn't happen with the checks above)
+        -- Rebuild basis using a fallback
+        local nonParallelVec = math.abs(forward.x) > 0.9 and vec3(0,1,0) or vec3(1,0,0)
+        right = math.cross(nonParallelVec, forward):normalize()
+        -- Fallback logic might need adjustment depending on engine coordinate system if this becomes an issue
+    else
+        right:normalize()
     end
+
+    local up = math.cross(forward, right):normalize() -- Already normalized due to cross product of normalized vectors
+
+    -- Construct the matrix (assuming column vectors for axes)
     return mat4x4(
-        vec4(right.x, right.y, right.z, 0),
-        vec4(up.x, up.y, up.z, 0),
-        vec4(forward.x, forward.y, forward.z, 0),
-        vec4(originWorld.x, originWorld.y, originWorld.z, 1)
+        vec4(right.x, right.y, right.z, 0),    -- Right vector (X axis)
+        vec4(up.x, up.y, up.z, 0),          -- Up vector (Y axis)
+        vec4(forward.x, forward.y, forward.z, 0), -- Forward vector (Z axis)
+        vec4(originWorld.x, originWorld.y, originWorld.z, 1) -- Position (W component is 1)
     )
 end
 
---- Solves IK for a 2-joint arm using FABRIK.
--- Chain: base -> arm1 (shoulder) -> arm2 (elbow) -> tip (end effector)
--- Target position is relative to the parent of the base node (platform).
--- Modifies the local transformations of arm1 and arm2 directly.
+--- Solves Inverse Kinematics for a 2-joint arm using FABRIK.
+-- Accepts parameters via a single table.
 --
--- @param baseRef ac.SceneReference Base node (its parent defines the platform coordinate system).
--- @param arm1Ref ac.SceneReference First rotating joint (shoulder/upper arm).
--- @param arm2Ref ac.SceneReference Second rotating joint (elbow/forearm).
--- @param tipRef ac.SceneReference End effector node (the offset is relative to this node).
--- @param targetPosPlatform vec3 Target position for the offset tip point, in platform coordinates.
--- @param iterations integer? Optional: Maximum number of FABRIK iterations (default: 10).
--- @param tolerance number? Optional: Position tolerance for convergence (default: 0.01 world units).
--- @param arm1Convention string? Optional: Local axis convention for arm1 ("Z_Fwd_Y_Up" or "Y_Fwd_Z_Up", default: "Z_Fwd_Y_Up").
--- @param arm2Convention string? Optional: Local axis convention for arm2 ("Z_Fwd_Y_Up" or "Y_Fwd_Z_Up", default: "Z_Fwd_Y_Up").
-local function solveFabrik2Joint(baseRef, arm1Ref, arm2Ref, tipRef, targetPosPlatform, iterations, tolerance, arm1Convention, arm2Convention)
+-- @param params table A table containing the following fields:
+--   - baseRef (ac.SceneReference): REQUIRED. The fixed base node of the IK chain.
+--   - arm1Ref (ac.SceneReference): REQUIRED. The first rotating joint node (e.g., shoulder/upper arm).
+--   - arm2Ref (ac.SceneReference): REQUIRED. The second rotating joint node (e.g., elbow/forearm).
+--   - tipRef (ac.SceneReference): REQUIRED. The end effector node. The `fixerOffset` is applied relative to this node's transform.
+--   - targetPosPlatform (vec3): REQUIRED. Target position for the offset tip point, specified in the coordinate system of the ancestor node found via `treeDepth`.
+--   - iterations (integer?): Optional. Maximum number of FABRIK iterations (default: 10).
+--   - tolerance (number?): Optional. Position tolerance for FABRIK convergence (default: 0.01 world units).
+--   - arm1Convention (string?): Optional. Local axis convention for `arm1Ref` ("Z_Fwd_Y_Up" or "Y_Fwd_Z_Up", default: "Z_Fwd_Y_Up").
+--   - arm2Convention (string?): Optional. Local axis convention for `arm2Ref` ("Z_Fwd_Y_Up" or "Y_Fwd_Z_Up", default: "Z_Fwd_Y_Up").
+--   - treeDepth (integer?): Optional. Number of levels to traverse up from `baseRef` to find the reference node for `targetPosPlatform` (default: 2).
+local function solveFabrik2Joint(params)
+    -- Validate required parameters
+    if not params or not params.baseRef or not params.arm1Ref or not params.arm2Ref or not params.tipRef or not params.targetPosPlatform then
+        print("IK Error: Missing required parameters in params table.")
+        if params then
+             print("Provided params:", params.baseRef, params.arm1Ref, params.arm2Ref, params.tipRef, params.targetPosPlatform)
+        end
+        return
+    end
+
+    -- Extract parameters with defaults
+    local baseRef = params.baseRef
+    local arm1Ref = params.arm1Ref
+    local arm2Ref = params.arm2Ref
+    local tipRef = params.tipRef
+    local targetPosPlatform = params.targetPosPlatform
+    local iterations = params.iterations or 10
+    local tolerance = params.tolerance or 0.01
+    local arm1Convention = params.arm1Convention or "Z_Fwd_Y_Up"
+    local arm2Convention = params.arm2Convention or "Z_Fwd_Y_Up"
+    local treeDepth = params.treeDepth or 2
+
+    -- Large offset applied to the tip node's transform. Intended to increase floating-point precision
+    -- during FABRIK calculations by working with larger numbers further from the origin, then canceled out.
     local fixerOffset = vec3(1000000, 1000000, 1000000)
 
+    -- Simplified Logging Setup
     local logBuffer = {}
-    -- Modified log functions to store pre-formatted strings
-    local log = function(key, value)
-        table.insert(logBuffer, string.format("[%s]: %s", key, tostring(value)))
-    end
-    local logVec3 = function(key, v)
-        local valueStr
-        if v and type(v.x) == "number" and type(v.y) == "number" and type(v.z) == "number" then
-            valueStr = string.format("%.4f, %.4f, %.4f", v.x, v.y, v.z)
-        elseif v then
-            valueStr = string.format("INVALID COMPONENTS x:%s, y:%s, z:%s", tostring(v.x), tostring(v.y), tostring(v.z))
-        else
-            valueStr = "nil"
+    local log = function(key, value) table.insert(logBuffer, string.format("[%s]: %s", key, tostring(value))) end
+    local logVec3 = function(key, v) log(key, v and string.format("%.4f, %.4f, %.4f", v.x, v.y, v.z) or "nil") end
+    local logMat4 = function(key, m) log(key .. " (Mat4)", m and tostring(m) or "nil") end -- Keep matrix log for debugging complex issues
+
+    local epsilon = 1e-8 -- Small value for float comparisons
+
+    -- === 0. Initial Setup & Reference Frames ===
+    log("--- IK Start ---", string.format("Iterations=%d, Tolerance=%.4f, TreeDepth=%d", iterations, tolerance, treeDepth))
+
+    -- Find the ancestor node used as the coordinate system for the target position
+    local targetReferenceNode = baseRef
+    for i = 1, treeDepth do
+        if targetReferenceNode then targetReferenceNode = targetReferenceNode:getParent() else
+            log("IK Error", "Nil parent found traversing treeDepth at level " .. i); print(table.concat(logBuffer, "\n")); return
         end
-        table.insert(logBuffer, string.format("[%s (Vec3)]: %s", key, valueStr))
     end
-    local logMat4 = function(key, m)
-        local valueStr = m and tostring(m) or "nil"
-        table.insert(logBuffer, string.format("[%s (Mat4)]: %s", key, valueStr))
-    end
+    if not targetReferenceNode then log("IK Error", "Target reference node nil after traversing depth"); print(table.concat(logBuffer, "\n")); return end
 
-    iterations = iterations or 10
-    tolerance = tolerance or 0.01
-    local epsilon = 1e-8
+    local T_targetReference_world = targetReferenceNode:getWorldTransformationRaw()
+    if not T_targetReference_world then log("IK Error", "Target reference node has no world transform"); print(table.concat(logBuffer, "\n")); return end
+    -- logMat4("T_targetReference_world", T_targetReference_world) -- Optional: Log if debugging target space issues
 
-    -- === 0. Log Initial State ===
-    log("--- IK Log Start ---", os.clock())
-    local platformRef = baseRef:getParent() -- Make accessible to helper
-    if not platformRef then
-        log("IK Error", "No base parent."); return
-    end
-    local T_platform_world = platformRef:getWorldTransformationRaw() -- Make accessible to helper
-    if not T_platform_world then
-        log("IK Error", "No platform world T."); return
-    end
-    local platformParentRef = platformRef:getParent()
-    if not platformParentRef then
-        log("IK Error", "No platform parent."); return
-    end
-    local T_platform_parent_world = platformParentRef:getWorldTransformationRaw()
-    if not T_platform_parent_world then
-        log("IK Error", "No platform parent world T."); return
-    end
+    -- Get current world transform of the base's immediate parent (platform)
+    local platformRef = baseRef:getParent()
+    if not platformRef then log("IK Error", "Base node has no parent"); print(table.concat(logBuffer, "\n")); return end
+    -- Note: T_platform_world is NOT used for the target, but T_base_world is needed later.
+    -- local T_platform_world = platformRef:getWorldTransformationRaw()
+    -- if not T_platform_world then log("IK Error", "Base parent has no world transform"); print(table.concat(logBuffer, "\n")); return end
 
-    logVec3("fixerOffset", fixerOffset) -- Log the input offset
+    -- === 1. Get Original Local Positions & Current World State ===
+    local O_arm1_base_orig = arm1Ref:getPosition()
+    local O_arm2_arm1_orig = arm2Ref:getPosition()
+    logVec3("Original Local Pos Arm1", O_arm1_base_orig)
+    logVec3("Original Local Pos Arm2", O_arm2_arm1_orig)
 
-    -- === 1. Get Current/Initial Transforms AND Original Local Positions ===
-    local T_base_platform_current = baseRef:getTransformationRaw()
-    local T_arm1_base_current = arm1Ref:getTransformationRaw()
-    local T_arm2_arm1_current = arm2Ref:getWorldTransformationRaw()
-    local T_tip_arm2_current = tipRef:getTransformationRaw()
-
-    if not T_base_platform_current or not T_arm1_base_current or not T_arm2_arm1_current or not T_tip_arm2_current then
-        log("IK Error", "Missing current transformations.")
-        print(table.concat(logBuffer, "\n"))
-        return
-    end
-
-    -- Store original local positions (offsets from parent)
-    local O_arm1_base_orig = arm1Ref:getPosition() -- Use getPosition() for clarity
-    local O_arm2_arm1_orig = arm2Ref:getPosition() -- Use getPosition() for clarity
-    logVec3("Original Local Pos Arm1 (from Base)", O_arm1_base_orig)
-    logVec3("Original Local Pos Arm2 (from Arm1)", O_arm2_arm1_orig)
-
-    -- === 2. Calculate CURRENT World Positions (for FABRIK input) ===
-    -- Get world transforms directly
-    local T_arm1_world_direct = arm1Ref:getWorldTransformationRaw()
-    local T_arm2_world_direct = arm2Ref:getWorldTransformationRaw()
-    local T_tip_world_direct  = tipRef:getWorldTransformationRaw() -- World transform of the tip node itself
-
-    if not T_arm1_world_direct or not T_arm2_world_direct or not T_tip_world_direct then
-        log("IK Error", "Missing direct world transformations for p array setup.")
-        print(table.concat(logBuffer, "\n"))
-        return
-    end
-
-    -- Calculate the world position of the offset tip point
-    local fixerOffsetWorld = T_tip_world_direct:transformPoint(fixerOffset)
-    logVec3("Initial Tip Origin World Pos", T_tip_world_direct.position)
-    logVec3("Initial Tip World Pos with fixerOffset", fixerOffsetWorld)
-
-    local p = {                               -- Chain points in WORLD space
-        T_arm1_world_direct.position:clone(), -- Arm1 Origin (Shoulder)
-        T_arm2_world_direct.position:clone(), -- Arm2 Origin (Elbow)
-        fixerOffsetWorld:clone()              -- Offset Tip Point (End Effector Point)
-    }
-    local chainRootPos = p[1]:clone()         -- World position of the first MOVING joint (Arm1)
-
-    -- Log the positions actually being used by FABRIK
-    logVec3("FABRIK Input p[1] (Arm1 World Origin)", p[1])
-    logVec3("FABRIK Input p[2] (Arm2 World Origin)", p[2])
-    logVec3("FABRIK Input p[3] (fixerOffset Tip World Pos)", p[3])
-    logVec3("FABRIK Chain Root World Pos (Arm1 Origin)", chainRootPos)
-
-    -- Get T_base_world_current for Step 8
     local T_base_world_current = baseRef:getWorldTransformationRaw()
-    if not T_base_world_current then
-        log("IK Error", "Could not fetch direct T_base_world_current")
-        print(table.concat(logBuffer, "\n")) -- Use simplified print
+    local T_arm1_world_current = arm1Ref:getWorldTransformationRaw()
+    local T_arm2_world_current = arm2Ref:getWorldTransformationRaw()
+    local T_tip_world_current  = tipRef:getWorldTransformationRaw()
+
+    if not T_base_world_current or not T_arm1_world_current or not T_arm2_world_current or not T_tip_world_current then
+        log("IK Error", "Missing initial world transformations for chain nodes.")
+        print(table.concat(logBuffer, "\n"))
         return
     end
-    logMat4("Direct T_base_world_current (for Step 8)", T_base_world_current)
+
+    -- === 2. Initialize FABRIK Points ===
+    -- Calculate the world position of the offset tip point using the large `fixerOffset`
+    local initialOffsetTipWorld = T_tip_world_current:transformPoint(fixerOffset)
+    logVec3("Initial Arm1 World Pos", T_arm1_world_current.position)
+    logVec3("Initial Arm2 World Pos", T_arm2_world_current.position)
+    logVec3("Initial Offset Tip World Pos", initialOffsetTipWorld)
+
+    -- FABRIK operates on these world space points: Shoulder, Elbow, OffsetTip
+    local p = {
+        T_arm1_world_current.position:clone(),
+        T_arm2_world_current.position:clone(),
+        initialOffsetTipWorld:clone()
+    }
+    local chainRootPos = p[1]:clone() -- World position of the first *movable* joint (Arm1)
 
     -- === 3. Calculate Segment Lengths ===
-    -- Segment lengths are now from Arm1 origin to Arm2 origin,
-    -- and from Arm2 origin to the OFFSET tip point.
     local l = { math.distance(p[2], p[1]), math.distance(p[3], p[2]) }
     if l[1] < epsilon or l[2] < epsilon then
-        log("IK Warning", "Segment length near zero."); return
+        log("IK Warning", "Segment length near zero. l1="..l[1]..", l2="..l[2]); -- Return might be too strict, allow attempt
     end
     local totalLength = l[1] + l[2]
-    log("Segment Lengths (Using Offset Tip)", string.format("l1=%.4f, l2=%.4f", l[1], l[2])) -- Updated log
+    log("Segment Lengths", string.format("l1=%.4f, l2=%.4f (Total=%.4f)", l[1], l[2], totalLength))
 
-    -- === 4. Target Position ===
-    local targetWorld = T_platform_world:transformPoint(targetPosPlatform)
-    logVec3("Target World Pos (for Offset Tip)", targetWorld) -- Updated log
+    -- === 4. Calculate Target World Position ===
+    local targetWorld = T_targetReference_world:transformPoint(targetPosPlatform)
+    logVec3("Target Platform Pos (Input)", targetPosPlatform)
+    logVec3("Target World Pos (Raw)", targetWorld)
 
-    -- === 5. Reachability ===
+    -- === 5. Check Reachability & Clamp Target ===
     local distRootToTarget = math.distance(targetWorld, chainRootPos)
     if distRootToTarget > totalLength * (1 + epsilon) then
         local oldTarget = targetWorld:clone()
-        targetWorld = chainRootPos + math.normalize(targetWorld - chainRootPos) * totalLength
-        logVec3("Target Clamped From", oldTarget)
-        logVec3("Target Clamped To", targetWorld)
+        targetWorld = chainRootPos + (targetWorld - chainRootPos):normalize() * totalLength
+        logVec3("Target World Pos (Clamped)", targetWorld)
+        -- logVec3("Target Original (Out of Reach)", oldTarget) -- Optional detail
     end
 
-    -- === 6. FABRIK Loop ===
-    -- The loop works on the p array, which now ends at the offset tip point
-    local currentDistToTarget = math.distance(p[3], targetWorld)
+    -- === 6. FABRIK Iteration Loop ===
+    local initialDist = math.distance(p[3], targetWorld)
     local iter = 0
-    local initialDist = currentDistToTarget
-    local getDir = function(from, to)
+    local getDir = function(from, to) -- Helper to get normalized direction safely
         local dir = to - from
-        if dir:lengthSquared() > epsilon * epsilon then
-            return dir:normalize()
-        else
-            log("IK WARN getDir", "collapsed vector"); return vec3(0, 1, 0)
-        end
+        return (dir:lengthSquared() > epsilon * epsilon) and dir:normalize() or vec3(0, 0, 1) -- Use Z axis as fallback
     end
-    while currentDistToTarget > tolerance and iter < iterations do
-        p[3] = targetWorld                      -- Move end point (offset tip) to target
-        p[2] = p[3] - getDir(p[3], p[2]) * l[2] -- Move elbow towards new tip pos
-        p[1] = p[2] - getDir(p[2], p[1]) * l[1] -- Move shoulder towards new elbow pos
 
-        p[1] = chainRootPos                     -- Reset shoulder to base
-        p[2] = p[1] + getDir(p[1], p[2]) * l[1] -- Move elbow out from base
-        p[3] = p[2] + getDir(p[2], p[3]) * l[2] -- Move tip out from elbow
-        currentDistToTarget = math.distance(p[3], targetWorld)
+    while math.distance(p[3], targetWorld) > tolerance and iter < iterations do
+        -- Backward pass: Constrain towards root
+        p[3] = targetWorld                      -- Snap end effector to target
+        p[2] = p[3] - getDir(p[3], p[2]) * l[2] -- Constrain elbow based on new tip and length l2
+        p[1] = p[2] - getDir(p[2], p[1]) * l[1] -- Constrain shoulder based on new elbow and length l1
+
+        -- Forward pass: Constrain away from root
+        p[1] = chainRootPos                     -- Snap shoulder back to its fixed root position
+        p[2] = p[1] + getDir(p[1], p[2]) * l[1] -- Constrain elbow based on new shoulder and length l1
+        p[3] = p[2] + getDir(p[2], p[3]) * l[2] -- Constrain tip based on new elbow and length l2
+
         iter = iter + 1
     end
-    local final_p = { p[1]:clone(), p[2]:clone(), p[3]:clone() }
-    log("FABRIK Iterations", iter)
-    log("FABRIK Initial Dist (Offset Tip to Target)", initialDist)       -- Updated log
-    log("FABRIK Final Dist (Offset Tip to Target)", currentDistToTarget) -- Updated log
-    log("FABRIK Delta", currentDistToTarget - initialDist)
-    logVec3("FABRIK Final World p[1] (Target Arm1 Origin)", final_p[1])
-    logVec3("FABRIK Final World p[2] (Target Arm2 Origin)", final_p[2])
-    logVec3("FABRIK Final World p[3] (Target Offset Tip Pos)", final_p[3]) -- Updated log
+    local finalDist = math.distance(p[3], targetWorld)
+    log("FABRIK Result", string.format("Iterations=%d, InitialDist=%.4f, FinalDist=%.4f", iter, initialDist, finalDist))
+    logVec3("Final Arm1 World Pos (FABRIK)", p[1])
+    logVec3("Final Arm2 World Pos (FABRIK)", p[2])
+    logVec3("Final Offset Tip World Pos (FABRIK)", p[3])
 
-    -- === 7. Calculate Target World Transforms (Using Helper) ===
-    -- These are still based on the JOINT positions (final_p[1] and final_p[2])
-    -- and the direction towards the NEXT point in the solved chain.
-    local T_target_arm1_world = buildWorldTransformLookingAt(final_p[1], final_p[2], vec3(0, 1, 0), epsilon) -- Arm1 looking at Arm2
-    local T_target_arm2_world = buildWorldTransformLookingAt(final_p[2], final_p[3], vec3(0, 1, 0), epsilon) -- Arm2 looking at Offset Tip
+    -- === 7. Calculate Target World Transforms for Joints ===
+    -- Use the solved FABRIK points to determine the desired world orientation for each joint.
+    local T_target_arm1_world = buildWorldTransformLookingAt(p[1], p[2], vec3(0, 1, 0), epsilon) -- Arm1 looks at Arm2
+    local T_target_arm2_world = buildWorldTransformLookingAt(p[2], p[3], vec3(0, 1, 0), epsilon) -- Arm2 looks towards the final offset tip position
+    -- logMat4("T_target_arm1_world", T_target_arm1_world) -- Optional detail
+    -- logMat4("T_target_arm2_world", T_target_arm2_world) -- Optional detail
 
-    logMat4("T_target_arm1_world (Built)", T_target_arm1_world)
-    logMat4("T_target_arm2_world (Built)", T_target_arm2_world)
-    logVec3("T_target_arm1_world Pos (Should match final_p[1])", T_target_arm1_world.position)
-    logVec3("T_target_arm2_world Pos (Should match final_p[2])", T_target_arm2_world.position)
+    -- === 8. Calculate Required Local Orientations ===
+    -- Convert the target world orientations into the local space of each joint's parent.
 
-    -- === 8. Calculate Required Local Orientation & Position ===
-    log("--- Step 8 Calculation (Required Local Orientation and Position) ---", "")
-
-    -- Arm 1
+    -- Arm 1 (Parent is Base)
     local T_inv_base_world_current = T_base_world_current:inverse()
-    if not T_inv_base_world_current then log("IK FATAL", "Inv Base World nil"); print(table.concat(logBuffer, "\n")); return end
-    if not T_target_arm1_world then log("IK FATAL", "Target Arm1 World nil"); print(table.concat(logBuffer, "\n")); return end
+    if not T_inv_base_world_current then log("IK Error", "Failed to invert Base world matrix"); print(table.concat(logBuffer, "\n")); return end
 
-    -- Extract target world orientation vectors (X=Right, Y=Up, Z=Forward for the built matrix)
-    local right1_target_world = vec3(T_target_arm1_world.row1.x, T_target_arm1_world.row1.y, T_target_arm1_world.row1.z):normalize()
-    local up1_target_world = vec3(T_target_arm1_world.row2.x, T_target_arm1_world.row2.y, T_target_arm1_world.row2.z):normalize()
-    local forward1_target_world = vec3(T_target_arm1_world.row3.x, T_target_arm1_world.row3.y, T_target_arm1_world.row3.z):normalize()
-    logVec3("Step8 Right1 Target World", right1_target_world)
-    logVec3("Step8 Up1 Target World", up1_target_world)
-    logVec3("Step8 Forward1 Target World", forward1_target_world)
+    -- Extract target world axes (Right, Up, Forward correspond to X, Y, Z of the standard matrix)
+    local R1_tgt_world = vec3(T_target_arm1_world.row1.x, T_target_arm1_world.row1.y, T_target_arm1_world.row1.z):normalize()
+    local U1_tgt_world = vec3(T_target_arm1_world.row2.x, T_target_arm1_world.row2.y, T_target_arm1_world.row2.z):normalize()
+    local F1_tgt_world = vec3(T_target_arm1_world.row3.x, T_target_arm1_world.row3.y, T_target_arm1_world.row3.z):normalize()
 
-    -- Transform world orientation vectors into parent's (Base) local space
-    local right1_required_local = T_inv_base_world_current:transformVector(right1_target_world):normalize()
-    local up1_required_local = T_inv_base_world_current:transformVector(up1_target_world):normalize()
-    local forward1_required_local = T_inv_base_world_current:transformVector(forward1_target_world):normalize()
-    -- Ensure orthogonality (optional but good practice)
-    forward1_required_local = math.cross(right1_required_local, up1_required_local):normalize()
-    up1_required_local = math.cross(forward1_required_local, right1_required_local):normalize()
-    logVec3("Step8 Right1 Required Local (Normalized & Ortho)", right1_required_local)
-    logVec3("Step8 Up1 Required Local (Normalized & Ortho)", up1_required_local)
-    logVec3("Step8 Forward1 Required Local (Normalized & Ortho)", forward1_required_local)
+    -- Transform target world axes into Base's local space
+    local R1_req_local = T_inv_base_world_current:transformVector(R1_tgt_world):normalize()
+    local U1_req_local = T_inv_base_world_current:transformVector(U1_tgt_world):normalize()
+    local F1_req_local = T_inv_base_world_current:transformVector(F1_tgt_world):normalize()
+    -- Re-orthogonalize F and U after transformation (F = R x U, U = F x R - slight drift possible)
+    F1_req_local = math.cross(R1_req_local, U1_req_local):normalize()
+    U1_req_local = math.cross(F1_req_local, R1_req_local):normalize()
 
-    -- Calculate the required LOCAL POSITION vector explicitly
-    local P_arm1_target_local = T_inv_base_world_current:transformPoint(final_p[1])
-    logVec3("Step8 P_arm1_target_local (Explicitly Calculated)", P_arm1_target_local)
+    -- Arm 2 (Parent is Arm1 - Use Arm1's CURRENT world inverse for stability)
+    local T_inv_arm1_world_current = T_arm1_world_current:inverse()
+    if not T_inv_arm1_world_current then log("IK Error", "Failed to invert Arm1 current world matrix"); print(table.concat(logBuffer, "\n")); return end
 
-    -- Arm 2
-    local T_inv_arm1_world_target = T_target_arm1_world:inverse() -- Use target world T for Arm1's inverse
-    if not T_inv_arm1_world_target then log("IK FATAL", "Inv Target Arm1 World nil"); print(table.concat(logBuffer, "\n")); return end
-    if not T_target_arm2_world then log("IK FATAL", "Target Arm2 World nil"); print(table.concat(logBuffer, "\n")); return end
+    -- Extract target world axes
+    local R2_tgt_world = vec3(T_target_arm2_world.row1.x, T_target_arm2_world.row1.y, T_target_arm2_world.row1.z):normalize()
+    local U2_tgt_world = vec3(T_target_arm2_world.row2.x, T_target_arm2_world.row2.y, T_target_arm2_world.row2.z):normalize()
+    local F2_tgt_world = vec3(T_target_arm2_world.row3.x, T_target_arm2_world.row3.y, T_target_arm2_world.row3.z):normalize()
 
-    -- Extract target world orientation vectors
-    local right2_target_world = vec3(T_target_arm2_world.row1.x, T_target_arm2_world.row1.y, T_target_arm2_world.row1.z):normalize()
-    local up2_target_world = vec3(T_target_arm2_world.row2.x, T_target_arm2_world.row2.y, T_target_arm2_world.row2.z):normalize()
-    local forward2_target_world = vec3(T_target_arm2_world.row3.x, T_target_arm2_world.row3.y, T_target_arm2_world.row3.z):normalize()
-    logVec3("Step8 Right2 Target World", right2_target_world)
-    logVec3("Step8 Up2 Target World", up2_target_world)
-    logVec3("Step8 Forward2 Target World", forward2_target_world)
+    -- Transform target world axes into Arm1's CURRENT local space
+    local R2_req_local = T_inv_arm1_world_current:transformVector(R2_tgt_world):normalize()
+    local U2_req_local = T_inv_arm1_world_current:transformVector(U2_tgt_world):normalize()
+    local F2_req_local = T_inv_arm1_world_current:transformVector(F2_tgt_world):normalize()
+    -- Re-orthogonalize
+    F2_req_local = math.cross(R2_req_local, U2_req_local):normalize()
+    U2_req_local = math.cross(F2_req_local, R2_req_local):normalize()
 
-    -- Transform world orientation vectors into parent's (Arm1 Target) local space
-    local right2_required_local = T_inv_arm1_world_target:transformVector(right2_target_world):normalize()
-    local up2_required_local = T_inv_arm1_world_target:transformVector(up2_target_world):normalize()
-    local forward2_required_local = T_inv_arm1_world_target:transformVector(forward2_target_world):normalize()
-    -- Ensure orthogonality
-    forward2_required_local = math.cross(right2_required_local, up2_required_local):normalize()
-    up2_required_local = math.cross(forward2_required_local, right2_required_local):normalize()
-    logVec3("Step8 Right2 Required Local (Normalized & Ortho)", right2_required_local)
-    logVec3("Step8 Up2 Required Local (Normalized & Ortho)", up2_required_local)
-    logVec3("Step8 Forward2 Required Local (Normalized & Ortho)", forward2_required_local)
+    -- === 9. Apply Orientation & Original Position ===
+    log("--- Applying Transforms ---", "")
 
-    -- Calculate the required LOCAL POSITION vector explicitly
-    local P_arm2_target_local = T_inv_arm1_world_target:transformPoint(final_p[2])
-    logVec3("Step8 P_arm2_target_local (Explicitly Calculated)", P_arm2_target_local)
+    -- Apply to Arm 1
+    local arm1_fwd_vec_apply, arm1_up_vec_apply -- Vectors to pass to setOrientation
+    -- Use arm1Convention variable extracted from params
+    log("Arm1 Convention", arm1Convention)
 
-    -- === 9. Apply Calculated Orientation & Position ===
-    log("--- Step 9 Applying Transforms ---", "")
-
-    -- Apply Arm 1
-    local arm1_fwd_vec, arm1_up_vec
-    local current_arm1_convention = arm1Convention or "Z_Fwd_Y_Up" -- Default convention
-    if current_arm1_convention == "Z_Fwd_Y_Up" then
-        arm1_fwd_vec = forward1_required_local -- Target Z maps to Arm1 Local Z (Forward)
-        arm1_up_vec = up1_required_local       -- Target Y maps to Arm1 Local Y (Up)
-        log("Step9 Arm1 Convention", "Z_Fwd_Y_Up")
-    elseif current_arm1_convention == "Y_Fwd_Z_Up" then
-        arm1_fwd_vec = up1_required_local       -- Target Y maps to Arm1 Local Y (Forward)
-        arm1_up_vec = forward1_required_local -- Target Z maps to Arm1 Local Z (Up)
-        log("Step9 Arm1 Convention", "Y_Fwd_Z_Up")
+    if arm1Convention == "Z_Fwd_Y_Up" then
+        -- Local Fwd=Z, Local Up=Y. Map required local F->Fwd, U->Up. Pass (F1_req_local, U1_req_local).
+        arm1_fwd_vec_apply = F1_req_local
+        arm1_up_vec_apply = U1_req_local
+    elseif arm1Convention == "Y_Fwd_Z_Up" then
+        -- Local Fwd=Y, Local Up=Z. Map required local U->Fwd, F->Up. Pass (U1_req_local, F1_req_local).
+        -- Empirically found that negating both vectors is required for this convention to point correctly.
+        arm1_fwd_vec_apply = -U1_req_local
+        arm1_up_vec_apply = -F1_req_local
+        log("Arm1", "(Applying NEGATED required U as Fwd, NEGATED required F as Up)")
     else
-        log("IK Error", "Unknown arm1Convention: " .. tostring(current_arm1_convention))
-        arm1_fwd_vec = nil -- Prevent application if convention is wrong
+        log("IK Error", "Unknown arm1Convention: " .. arm1Convention); arm1_fwd_vec_apply = nil
     end
 
-    if arm1Ref and arm1_fwd_vec and arm1_up_vec and P_arm1_target_local then
-        logVec3("Step9 Arm1 Applying Fwd Vector", arm1_fwd_vec)
-        logVec3("Step9 Arm1 Applying Up Vector", arm1_up_vec)
-        arm1Ref:setOrientation(arm1_fwd_vec, arm1_up_vec) -- Apply Look/Up vectors based on convention
-        log("Applied setOrientation to arm1Ref", "")
-
-        logVec3("Step9 Arm1 Setting Explicitly Calculated Local Pos To", P_arm1_target_local)
-        arm1Ref:setPosition(P_arm1_target_local) -- Apply local position
-        log("Applied setPosition to arm1Ref", "")
+    if arm1Ref and arm1_fwd_vec_apply and arm1_up_vec_apply then
+        arm1Ref:setOrientation(arm1_fwd_vec_apply, arm1_up_vec_apply)
+        arm1Ref:setPosition(O_arm1_base_orig) -- Restore original local position
+        log("Arm1", "Applied Orientation & Original Position")
     else
-        log("IK Error", "arm1Ref, required vectors, or P_arm1_target_local is nil or convention unknown.")
+        log("IK Error", "Failed to apply transform to Arm1 (nil vectors or ref)")
     end
 
-    -- Apply Arm 2
-    local arm2_fwd_vec, arm2_up_vec
-    local current_arm2_convention = arm2Convention or "Z_Fwd_Y_Up" -- Default convention
-    if current_arm2_convention == "Z_Fwd_Y_Up" then
-        arm2_fwd_vec = forward2_required_local -- Target Z maps to Arm2 Local Z (Forward)
-        arm2_up_vec = up2_required_local       -- Target Y maps to Arm2 Local Y (Up)
-        log("Step9 Arm2 Convention", "Z_Fwd_Y_Up")
-    elseif current_arm2_convention == "Y_Fwd_Z_Up" then
-        arm2_fwd_vec = up2_required_local       -- Target Y maps to Arm2 Local Y (Forward)
-        arm2_up_vec = forward2_required_local -- Target Z maps to Arm2 Local Z (Up)
-        log("Step9 Arm2 Convention", "Y_Fwd_Z_Up")
+    -- Apply to Arm 2
+    local arm2_fwd_vec_apply, arm2_up_vec_apply
+    -- Use arm2Convention variable extracted from params
+    log("Arm2 Convention", arm2Convention)
+
+    if arm2Convention == "Z_Fwd_Y_Up" then
+        -- Local Fwd=Z, Local Up=Y. Map required local F->Fwd, U->Up. Pass (F2_req_local, U2_req_local).
+        arm2_fwd_vec_apply = F2_req_local
+        arm2_up_vec_apply = U2_req_local
+    elseif arm2Convention == "Y_Fwd_Z_Up" then
+        -- Local Fwd=Y, Local Up=Z. Map required local U->Fwd, F->Up. Pass (U2_req_local, F2_req_local).
+        -- Apply same negation logic as Arm1 for consistency.
+        arm2_fwd_vec_apply = -U2_req_local
+        arm2_up_vec_apply = -F2_req_local
+        log("Arm2", "(Applying NEGATED required U as Fwd, NEGATED required F as Up)")
     else
-        log("IK Error", "Unknown arm2Convention: " .. tostring(current_arm2_convention))
-        arm2_fwd_vec = nil -- Prevent application if convention is wrong
+        log("IK Error", "Unknown arm2Convention: " .. arm2Convention); arm2_fwd_vec_apply = nil
     end
 
-    if arm2Ref and arm2_fwd_vec and arm2_up_vec and P_arm2_target_local then
-        logVec3("Step9 Arm2 Applying Fwd Vector", arm2_fwd_vec)
-        logVec3("Step9 Arm2 Applying Up Vector", arm2_up_vec)
-        arm2Ref:setOrientation(arm2_fwd_vec, arm2_up_vec) -- Apply Look/Up vectors based on convention
-        log("Applied setOrientation to arm2Ref", "")
-
-        logVec3("Step9 Arm2 Setting Explicitly Calculated Local Pos To", P_arm2_target_local)
-        arm2Ref:setPosition(P_arm2_target_local) -- Apply local position
-        log("Applied setPosition to arm2Ref", "")
+    if arm2Ref and arm2_fwd_vec_apply and arm2_up_vec_apply then
+        arm2Ref:setOrientation(arm2_fwd_vec_apply, arm2_up_vec_apply)
+        arm2Ref:setPosition(O_arm2_arm1_orig) -- Restore original local position
+        log("Arm2", "Applied Orientation & Original Position")
     else
-        log("IK Error", "arm2Ref, required vectors, or P_arm2_target_local is nil or convention unknown.")
+        log("IK Error", "Failed to apply transform to Arm2 (nil vectors or ref)")
     end
 
-    -- === 10. Log Final State & Verification ===
-    log("--- Step 10 Final State & Verification ---", "")
-
-    -- Verification: Read the final world position of the OFFSET tip point
-    local T_tip_world_final_direct = tipRef:getWorldTransformationRaw()
-    local reconstructed_offset_tip_pos_direct = T_tip_world_final_direct and
-        T_tip_world_final_direct:transformPoint(fixerOffset) or
-        nil -- Apply offset again
-
+    -- === 10. Final Verification (Optional) ===
+    log("--- Verification ---", "")
+    local T_tip_world_final = tipRef:getWorldTransformationRaw()
+    local finalOffsetTipPos = T_tip_world_final and T_tip_world_final:transformPoint(fixerOffset) or nil
+    if finalOffsetTipPos then
     logVec3("VERIFY Target World (Clamped)", targetWorld)
-    logVec3("VERIFY FABRIK End Pos (p[3])", final_p[3])
-    logVec3("VERIFY Reconstructed Offset Tip World Pos (Direct Read)", reconstructed_offset_tip_pos_direct) -- Updated log
-
-    if reconstructed_offset_tip_pos_direct then
-        log("VERIFY Dist FABRIK vs Direct Offset Read", math.distance(final_p[3], reconstructed_offset_tip_pos_direct))  -- Updated log
-        log("VERIFY Dist Target vs Direct Offset Read", math.distance(targetWorld, reconstructed_offset_tip_pos_direct)) -- Updated log
+        logVec3("VERIFY Final Offset Tip Pos (Direct Read)", finalOffsetTipPos)
+        log("VERIFY Final Distance to Target", math.distance(targetWorld, finalOffsetTipPos))
     else
-        log("IK Debug Error", "Could not get direct final tip world transform for offset verification.")
+        log("IK Verify Error", "Could not get final tip world transform.")
     end
 
-    -- Print the buffered logs
-    print("--- IK Log Frame ---\n" .. table.concat(logBuffer, "\n")) -- Simplified final print
+    -- Print all logs for the frame
+    -- print("--- IK Log Frame ---\n" .. table.concat(logBuffer, "\n")) -- Enable for detailed debugging
 end -- End of solveFabrik2Joint
 
 
