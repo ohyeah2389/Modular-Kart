@@ -1,6 +1,7 @@
 local helpers = require("helpers")
 local Physics = require("physics_classes")
-local ikSolver = require("ik")
+local ikSolver_fabrik = require("fabrik")
+local ikSolver_jacobian = require("jacobian")
 
 local DriverAnimator = class("DriverAnimator")
 
@@ -375,19 +376,11 @@ local driverHips = ac.findNodes("DRIVER:RIG_Hips")
 driverHips:storeCurrentTransformation()
 
 
-function DriverAnimator:update(dt, antiResetAdder)
-    local target_x = 0 + math.sin(sim.time * 0.005 + math.pi / 2) * 0.1
-    local target_y = 0.8 + math.sin(sim.time * 0.005) * 0.1
-    local target_z = 0 + math.sin(sim.time * 0.007) * 0.0
-
-    local targetPos = vec3(target_x, target_y, target_z)
-
-    stickBase:setPosition(vec3(0 + car.steer * 0.005, 1, 0))
-
+local function driverIK(dt)
     local handTargetSteerClamp = math.clamp(car.steer, -90, 90)
     local steerAngleRad = math.rad(handTargetSteerClamp)
 
-    -- Define rotation parameters for hand target
+    -- Define rotation parameters for hand target on wheel
     local rotationOrigin = vec3(0, 0.446, 0.117)  -- Center of rotation
     local rotationRadius = -0.19                  -- Distance from origin (tune this value)
     local rotationAxisLook = vec3(0, 1, -1)         -- Axis to rotate around (e.g., positive X)
@@ -399,11 +392,9 @@ function DriverAnimator:update(dt, antiResetAdder)
     local rotationAxisRight = rotationAxisInitialUp:cross(rotationAxisLook):normalize()
     -- Recalculate the 'up' vector to ensure it's orthogonal to both look and right
     local rotationAxisUp = rotationAxisLook:cross(rotationAxisRight):normalize()
-
     -- Calculate position using trigonometry relative to the rotation plane basis
     local cosAngle = math.cos(steerAngleRad)
     local sinAngle = math.sin(steerAngleRad)
-
     -- Calculate the displacement vector from the origin along the plane's axes
     -- axisUp corresponds to cos(angle), axisRight corresponds to sin(angle)
     local relativePos = rotationAxisUp:scale(rotationRadius * cosAngle):addScaled(rotationAxisRight, rotationRadius * sinAngle)
@@ -411,92 +402,66 @@ function DriverAnimator:update(dt, antiResetAdder)
     -- Final target position is the origin plus the calculated displacement
     local handTargetPos_R = rotationOrigin + relativePos
     local handTargetPos_L = rotationOrigin - relativePos
-    ac.debug("relativePos", relativePos)
-    ac.debug("handTargetPos", handTargetPos_R)
 
     driverHips:setOrientation(vec3(0.1 * (-car.steer/90), (self.states.handUp.progress * -1.6) - ((math.sin(math.rad(math.abs(car.steer)))^2) * 0.1) - 0.3, 1), vec3(0.05 * (-car.steer/90), 0, 1))
 
-    -- Call ikSolver with a parameter table for the test stick
-    --ikSolver({
-    --    baseRef = stickBase,
-    --    arm1Ref = stickArm1,
-    --    arm2Ref = stickArm2,
-    --    tipRef = stickTip,
-    --    targetPosPlatform = targetPos,
-    --    iterations = 20,
-    --    tolerance = 0.001,
-    --    arm1Convention = "Z_Fwd_Y_Up",
-    --    arm2Convention = "Z_Fwd_Y_Up",
-    --    treeDepth = 2, -- Default, but explicit here
-    --    debug = false
-    --})
+    driverArm_R_forearmEnd:setRotation(vec3(0, 1, 0), math.rad(20 + helpers.mapRange(car.steer, 0, 90, 0, -120, true) + helpers.mapRange(car.steer, -90, 0, 60, 0, true)))
+    driverArm_R_hand:setOrientation(vec3(0, -0.2 + (math.clamp(car.steer, 0, 90) * 0.005), 1))
+end
 
-    -- Call ikSolver with a parameter table for the driver arm
-    ikSolver({
-        baseRef = driverArm_R_clavicle,
-        arm1Ref = driverArm_R_upper,
-        arm2Ref = driverArm_R_forearm,
-        tipRef = driverArm_R_forearmEnd,
-        targetPosPlatform = handTargetPos_R,
-        iterations = 20,
-        tolerance = 0.001,
-        arm1Convention = "Y_Fwd_Z_Up",
-        arm2Convention = "Y_Fwd_Z_Up",
-        treeDepth = 6,
-        debug = false,
 
-        -- Shoulder Constraint (Cone)
-        arm1ConstraintType = "cone",
-        arm1ConeAxisLocal = vec3(-0.5 + (self.states.handUp.progress * 0.3 * helpers.mapRange(car.steer, 0, -90, 0, 1, true)), 0.1 - helpers.mapRange(car.steer, -90, 0, -0.2, 0, true), 0.3 + helpers.mapRange(car.steer, 0, 90, 0, -0.4, true)):normalize(),
-        arm1MaxConeAngle = 5 + helpers.mapRange(car.steer, -90, 0, 40, 0, true) + helpers.mapRange(car.steer, 0, 90, 0, 5, true),
-        -- Add Twist Limits for Shoulder (relative to cone axis reference)
-        arm1MinTwistAngle = -120, -- Limit inward rotation
-        arm1MaxTwistAngle = -100,  -- Limit outward rotation
+local function testIK()
+    local target_x = 0 + math.sin(sim.time * 0.005 + math.pi / 2) * 0.1
+    local target_y = 1 + math.sin(sim.time * 0.005) * 0.1
+    local target_z = 0.1 + math.sin(sim.time * 0.007) * 0.0
+    local stickTargetPos = vec3(target_x, target_y, target_z)
 
-        ---- Elbow Constraint (Hinge)
-        --arm2ConstraintType = "hinge",
-        --arm2HingeAxisLocal = vec3(1, 0, 0),
-        --arm2MinHingeAngle = -10,
-        --arm2MaxHingeAngle = 140,
-        ---- Add OPTIONAL Twist Limits for Elbow (usually 0 for human)
-        --arm2MinTwistAngle = -200, -- Allow slight twist (optional)
-        --arm2MaxTwistAngle = -100   -- Allow slight twist (optional)
-    })
+    stickBase:setPosition(vec3(0 + car.steer * 0.005, 1, -0.5))
 
-    ikSolver({
-        baseRef = driverArm_L_clavicle,
-        arm1Ref = driverArm_L_upper,
-        arm2Ref = driverArm_L_forearm,
-        tipRef = driverArm_L_forearmEnd,
-        targetPosPlatform = handTargetPos_L,
-        iterations = 20,
-        tolerance = 0.001,
-        arm1Convention = "Y_Fwd_Z_Up",
-        arm2Convention = "Y_Fwd_Z_Up",
-        treeDepth = 6,
-        debug = false,
+    -- Call ikSolver_jacobian for the test stick
+    local targetRefNode = stickBase:getParent():getParent() -- Get the node corresponding to treeDepth=2
+    local targetWorldPosStick
+    if targetRefNode then
+        local targetRefWorldT = targetRefNode:getWorldTransformationRaw()
+        if targetRefWorldT then
+            targetWorldPosStick = targetRefWorldT:transformPoint(stickTargetPos)
+        end
+    end
 
-        -- Shoulder Constraint (Cone)
-        arm1ConstraintType = "cone",
-        arm1ConeAxisLocal = vec3(-0.5 + (self.states.handUp.progress * 0.3 * helpers.mapRange(car.steer, 0, -90, 0, 1, true)), 0.1 - helpers.mapRange(car.steer, -90, 0, -0.2, 0, true), 0.3 + helpers.mapRange(car.steer, 0, 90, 0, -0.4, true)):normalize(),
-        arm1MaxConeAngle = 5 + helpers.mapRange(car.steer, -90, 0, 40, 0, true) + helpers.mapRange(car.steer, 0, 90, 0, 5, true),
-        -- Add Twist Limits for Shoulder (relative to cone axis reference)
-        arm1MinTwistAngle = -120, -- Limit inward rotation
-        arm1MaxTwistAngle = -100,  -- Limit outward rotation
+    if targetWorldPosStick then
+        -- Define approximate Euler constraints
+        local shoulderMaxSwingRad = math.rad(80)
+        local shoulderMaxTwistRad = math.rad(10)
 
-        ---- Elbow Constraint (Hinge)
-        --arm2ConstraintType = "hinge",
-        --arm2HingeAxisLocal = vec3(1, 0, 0),
-        --arm2MinHingeAngle = -10,
-        --arm2MaxHingeAngle = 140,
-        ---- Add OPTIONAL Twist Limits for Elbow (usually 0 for human)
-        --arm2MinTwistAngle = -200, -- Allow slight twist (optional)
-        --arm2MaxTwistAngle = -100   -- Allow slight twist (optional)
-    })
+        ikSolver_jacobian({
+            baseRef = stickBase,
+            shoulderRef = stickArm1, -- Renamed parameter
+            elbowRef = stickArm2,    -- Renamed parameter
+            tipRef = stickTip,
+            targetPosWorld = targetWorldPosStick, -- Target MUST be in world space
+            debug = true,
 
-    driverArm_R_forearmEnd:setRotation(vec3(0, 1, 0), math.rad(20 + helpers.mapRange(car.steer, 0, 90, 0, -80, true) + helpers.mapRange(car.steer, -90, 0, 60, 0, true)))
-    driverArm_R_hand:setOrientation(vec3(0, -0.2, 1))
+            shoulderConstraints = {
+                -- Approximate cone limit around Z using X and Y rotation limits
+                minX = -shoulderMaxSwingRad, maxX = shoulderMaxSwingRad,
+                minY = -shoulderMaxSwingRad, maxY = shoulderMaxSwingRad,
+                -- Use Z rotation for the twist limit relative to parent
+                minZ = -shoulderMaxTwistRad, maxZ = shoulderMaxTwistRad
+            },
 
+            elbowConstraints = {
+                axis = vec3(1, 0, 0),      -- Same local hinge axis
+                min = math.rad(-10),      -- Convert degrees to radians
+                max = math.rad(90)       -- Convert degrees to radians
+            }
+        })
+    else
+        print("IK Stick Error: Could not calculate world target position.")
+    end
+end
+
+
+function DriverAnimator:update(dt, antiResetAdder)
     self:updateStates(dt)
 
     local breathSine = math.sin(sim.time * 0.002)
@@ -531,12 +496,12 @@ function DriverAnimator:update(dt, antiResetAdder)
     ac.debug("legR force", self.physicsObjects.legR.force)
 
     -- Update vertical and lateral baked animations
-    --self.nodes.model.node:setAnimation("../animations/latG.ksanim",
-    --    math.clamp(self.physicsObjects.bodyLat:step(bodyLatForce, dt), 0.02, 0.98) + (breathSineHarmonic * 0.005) +
-    --    ((antiResetAdder - 0.5) * 0.005))
-    --self.nodes.model.node:setAnimation("../animations/vertG.ksanim",
-    --    math.clamp(self.physicsObjects.bodyVert:step(bodyVertForce, dt), 0.02, 0.98) + (breathSine * 0.01) +
-    --    ((antiResetAdder - 0.5) * 0.005))
+    self.nodes.model.node:setAnimation("../animations/latG.ksanim",
+        math.clamp(self.physicsObjects.bodyLat:step(bodyLatForce, dt), 0.02, 0.98) + (breathSineHarmonic * 0.005) +
+        ((antiResetAdder - 0.5) * 0.005))
+    self.nodes.model.node:setAnimation("../animations/vertG.ksanim",
+        math.clamp(self.physicsObjects.bodyVert:step(bodyVertForce, dt), 0.02, 0.98) + (breathSine * 0.01) +
+        ((antiResetAdder - 0.5) * 0.005))
 
     -- Update feet
     self.nodes.foot.L.node:setOrientation(

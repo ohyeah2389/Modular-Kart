@@ -328,7 +328,7 @@ local function clampOrientationToConeAndTwist(fwdLocal, upLocal, coneAxisLocal, 
     return fwdClampedLocal, upFinal
 end
 
---- Clamps ONLY the TWIST of a local orientation (fwd, up) relative to a dynamically chosen reference axis.
+--- Clamps the twist of a local orientation (fwd, up) relative to a dynamically chosen reference axis.
 -- Assumes the primary constraint (cone/hinge angle) has already been enforced.
 -- @param fwdLocal vec3 The desired local forward vector (normalized, assumed constraint-valid).
 -- @param upLocal vec3 The desired local up vector (normalized, orthogonal to fwdLocal).
@@ -619,7 +619,7 @@ local function solveFabrik2Joint(params)
                 local current_cone_angle = math.acos(angle_dot)
 
                 -- [[ Add Cone Debug Logs ]]
-                if params.debug then -- Only log if debug is enabled
+                if params.debug and (iter == 1 or iter == 2 or iter % 10 == 0) then -- Only log if debug is enabled and on specific iterations
                     log("Iter "..iter.." ConeCheck", "-------------------------")
                     logVec3("Iter "..iter.." ConeCheck", temp_dir_local)
                     logVec3("Iter "..iter.." ConeAxis ", arm1ConeAxisLocal)
