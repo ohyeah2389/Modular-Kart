@@ -51,145 +51,73 @@ function FrameRateChecker:update(dt)
 end
 
 
-local wheelClassic = ac.findNodes("SteeringWheelClassic")
-local wheelModern = ac.findNodes("SteeringWheelModern")
-local wheelRetro = ac.findNodes("SteeringWheelRetro")
-local function wheelSelection()
-    local setupItem = ac.load('modkart_c2_shared_' .. car.index .. '.wheel') or 0
-
-    if setupItem == 0 then
-        wheelClassic:setVisible(true)
-        wheelModern:setVisible(false)
-        wheelRetro:setVisible(false)
-    elseif setupItem == 1 then
-        wheelClassic:setVisible(false)
-        wheelModern:setVisible(true)
-        wheelRetro:setVisible(false)
-    elseif setupItem == 2 then
-        wheelClassic:setVisible(false)
-        wheelModern:setVisible(false)
-        wheelRetro:setVisible(true)
-    end
-end
-
-
-local nassauOTK = ac.findNodes("OTK M7 Nassau")
-local nassauKG = ac.findNodes("KG508_Nassau")
-local nassauEuro = ac.findNodes("Eurostar Dynamica Nassau")
-local nassauMetal = ac.findNodes("MetalFairingNassau")
-local function nassauSelection()
-    local setupItem = ac.load('modkart_c2_shared_' .. car.index .. '.nassau') or 0
-
-    if setupItem == 0 then
-        nassauOTK:setVisible(true)
-        nassauKG:setVisible(false)
-        nassauEuro:setVisible(false)
-        nassauMetal:setVisible(false)
-    elseif setupItem == 1 then
-        nassauOTK:setVisible(false)
-        nassauKG:setVisible(true)
-        nassauEuro:setVisible(false)
-        nassauMetal:setVisible(false)
-    elseif setupItem == 2 then
-        nassauOTK:setVisible(false)
-        nassauKG:setVisible(false)
-        nassauEuro:setVisible(true)
-        nassauMetal:setVisible(false)
-    elseif setupItem == 3 then
-        nassauOTK:setVisible(false)
-        nassauKG:setVisible(false)
-        nassauEuro:setVisible(false)
-        nassauMetal:setVisible(true)
-    elseif setupItem == 100 then
-        nassauOTK:setVisible(false)
-        nassauKG:setVisible(false)
-        nassauEuro:setVisible(false)
-        nassauMetal:setVisible(false)
-    end
-end
+-- Configuration table for customizable parts
+local partConfigurations = {
+    wheel = {
+        setupKeySuffix = '.wheel',
+        options = {
+            [0] = {"SteeringWheelClassic"},
+            [1] = {"SteeringWheelModern"},
+            [2] = {"SteeringWheelRetro"}
+        }
+    },
+    nassau = {
+        setupKeySuffix = '.nassau',
+        options = {
+            [0] = {"OTK M7 Nassau"},
+            [1] = {"KG508_Nassau"},
+            [2] = {"Eurostar Dynamica Nassau"},
+            [3] = {"MetalFairingNassau"},
+            [4] = {"KG Buru Nassau"},
+            [100] = {} -- hide all
+        }
+    },
+    frontBumper = {
+        setupKeySuffix = '.frontBumper',
+        options = {
+            [0] = {"OTK M6 Nosecone"},
+            [1] = {"KG506 Nosecone"},
+            [2] = {"KG Buru Nosecone"},
+            [100] = {} -- hide all
+        }
+    },
+    rearBumper = {
+        setupKeySuffix = '.rearBumper',
+        options = {
+            [0] = {"RearBumperMount"},
+            [1] = {"RearBumperMetalNew"},
+            [2] = {"RearBumperMetalOld"},
+            [100] = {} -- hide all
+        }
+    },
+    sidepod = {
+        setupKeySuffix = '.sidepod',
+        options = {
+            [0] = {"OTK M10 Sidepod Left", "OTK M10 Sidepod Right"},
+            [1] = {"OTK M6 Sidepod Left", "OTK M6 Sidepod Right"},
+            [2] = {"SidepodMetal_L", "SidepodMetal_R"},
+            [100] = {} -- hide all
+        }
+    }
+}
 
 
-local frontBumperOTK = ac.findNodes("OTK M6 Nosecone")
-local frontBumperKG = ac.findNodes("KG506 Nosecone")
-local function frontBumperSelection()
-    local setupItem = ac.load('modkart_c2_shared_' .. car.index .. '.frontBumper') or 0
+local function updatePartVisibility(partConfig)
+    local baseSetupKey = 'modkart_c2_shared_' .. car.index
+    local setupItem = ac.load(baseSetupKey .. partConfig.setupKeySuffix) or 0 -- Default to 0
 
-    if setupItem == 0 then
-        frontBumperOTK:setVisible(true)
-        frontBumperKG:setVisible(false)
-    elseif setupItem == 1 then
-        frontBumperOTK:setVisible(false)
-        frontBumperKG:setVisible(true)
-    elseif setupItem == 100 then
-        frontBumperOTK:setVisible(false)
-        frontBumperKG:setVisible(false)
-    end
-end
-
-
-local rearBumperOTK = ac.findNodes("RearBumperMount")
-local rearBumperMetalNew = ac.findNodes("RearBumperMetalNew")
-local rearBumperMetalOld = ac.findNodes("RearBumperMetalOld")
-local function rearBumperSelection()
-    local setupItem = ac.load('modkart_c2_shared_' .. car.index .. '.rearBumper') or 0
-
-    if setupItem == 0 then
-        rearBumperOTK:setVisible(true)
-        rearBumperMetalNew:setVisible(false)
-        rearBumperMetalOld:setVisible(false)
-    elseif setupItem == 1 then
-        rearBumperOTK:setVisible(false)
-        rearBumperMetalNew:setVisible(true)
-        rearBumperMetalOld:setVisible(false)
-    elseif setupItem == 2 then
-        rearBumperOTK:setVisible(false)
-        rearBumperMetalNew:setVisible(false)
-        rearBumperMetalOld:setVisible(true)
-    elseif setupItem == 100 then
-        rearBumperOTK:setVisible(false)
-        rearBumperMetalNew:setVisible(false)
-        rearBumperMetalOld:setVisible(false)
-    end
-end
-
-
-local sidepodOTKM10_left = ac.findNodes("OTK M10 Sidepod Left")
-local sidepodOTKM10_right = ac.findNodes("OTK M10 Sidepod Right")
-local sidepodOTKM6_left = ac.findNodes("OTK M6 Sidepod Left")
-local sidepodOTKM6_right = ac.findNodes("OTK M6 Sidepod Right")
-local sidepodMetal_left = ac.findNodes("SidepodMetal_L")
-local sidepodMetal_right = ac.findNodes("SidepodMetal_R")
-local function sidepodSelection()
-    local setupItem = ac.load('modkart_c2_shared_' .. car.index .. '.sidepod') or 0
-
-    if setupItem == 0 then
-        sidepodOTKM10_left:setVisible(true)
-        sidepodOTKM10_right:setVisible(true)
-        sidepodOTKM6_left:setVisible(false)
-        sidepodOTKM6_right:setVisible(false)
-        sidepodMetal_left:setVisible(false)
-        sidepodMetal_right:setVisible(false)
-    elseif setupItem == 1 then
-        sidepodOTKM10_left:setVisible(false)
-        sidepodOTKM10_right:setVisible(false)
-        sidepodOTKM6_left:setVisible(true)
-        sidepodOTKM6_right:setVisible(true)
-        sidepodMetal_left:setVisible(false)
-        sidepodMetal_right:setVisible(false)
-    elseif setupItem == 2 then
-        sidepodOTKM10_left:setVisible(false)
-        sidepodOTKM10_right:setVisible(false)
-        sidepodOTKM6_left:setVisible(false)
-        sidepodOTKM6_right:setVisible(false)
-        sidepodMetal_left:setVisible(true)
-        sidepodMetal_right:setVisible(true)
-    elseif setupItem == 100 then
-        sidepodOTKM10_left:setVisible(false)
-        sidepodOTKM10_right:setVisible(false)
-        sidepodOTKM6_left:setVisible(false)
-        sidepodOTKM6_right:setVisible(false)
-        sidepodMetal_left:setVisible(false)
-        sidepodMetal_right:setVisible(false)
+    -- Iterate through all defined options for this part type
+    for optionValue, nodeNames in pairs(partConfig.options) do
+        -- Determine if this option is the one selected in the setup
+        local isVisible = (optionValue == setupItem)
+        -- Set visibility for all nodes associated with this option
+        for _, nodeName in ipairs(nodeNames) do
+            local node = ac.findNodes(nodeName)
+            -- Check if node exists before trying to set visibility
+            if node then
+                node:setVisible(isVisible)
+            end
+        end
     end
 end
 
@@ -240,9 +168,8 @@ function script.update(dt)
     tierodLControl:setPosition(helpers.getPositionInCarFrame(tierodLTarget, carNode))
     tierodRControl:setPosition(helpers.getPositionInCarFrame(tierodRTarget, carNode))
 
-    wheelSelection()
-    nassauSelection()
-    frontBumperSelection()
-    sidepodSelection()
-    rearBumperSelection()
+    -- Update visibility for all configured parts
+    for _, partConfig in pairs(partConfigurations) do
+        updatePartVisibility(partConfig)
+    end
 end
