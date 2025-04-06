@@ -63,10 +63,11 @@ def load_parameters(config_file):
     try:
         with open(config_file, 'rb') as f:
             config = tomli.load(f)
-        return config['front_tire'], config['rear_tire'], config['base_path'], config['ranges']
+        # Return the entire config dictionary
+        return config
     except FileNotFoundError:
         print(f"Error: Configuration file '{config_file}' not found.")
-        print("Please ensure tire_parameters.toml exists in the same directory as this script.")
+        print(f"Please ensure {config_file} exists in the same directory as this script.")
         exit(1)
     except Exception as e:
         print(f"Error reading configuration file: {str(e)}")
@@ -75,55 +76,95 @@ def load_parameters(config_file):
 
 def write_lut_file(filename, values, outputs, params):
     """Write the lookup table to a file"""
-    os.makedirs(os.path.dirname(filename), exist_ok=True)
-    
+    # Ensure the base directory exists
+    output_dir = os.path.dirname(filename)
+    if output_dir: # Check if dirname returned a non-empty string
+        os.makedirs(output_dir, exist_ok=True)
+    else:
+        # Handle case where filename is in the current directory
+        print(f"Warning: Outputting file '{filename}' to the current directory.")
+
     with open(filename, 'w') as f:
-        
+
         # Write data points
         for x, y in zip(values, outputs):
             f.write(f"{int(x)}\t|\t{y:.3f}\n")
-        
+
         # Write timestamp and header
         timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         f.write(f"\n;Generated on {timestamp} from the following parameters:\n")
-        
+
         # Write parameters as comments
-        f.write(f"\n;REF_M\t{params['REF_M']}")
-        f.write(f"\n;SLOPE_0\t{params['SLOPE_0']}")
-        f.write(f"\n;SLOPE_1\t{params['SLOPE_1']}")
-        f.write(f"\n;ADHESION\t{params['ADHESION']}")
-        f.write(f"\n;X_MULT\t{params['X_MULT']}")
-        f.write(f"\n;SLOPE_0_X\t{params['SLOPE_0_X']}")
-        f.write(f"\n;SLOPE_1_X\t{params['SLOPE_1_X']}")
-        f.write(f"\n;M_CLAMP\t{params['M_CLAMP']}")
+        f.write(f"\n;REF_M\t{params.get('REF_M', 'N/A')}") # Use .get for safety
+        f.write(f"\n;SLOPE_0\t{params.get('SLOPE_0', 'N/A')}")
+        f.write(f"\n;SLOPE_1\t{params.get('SLOPE_1', 'N/A')}")
+        f.write(f"\n;ADHESION\t{params.get('ADHESION', 'N/A')}")
+        f.write(f"\n;X_MULT\t{params.get('X_MULT', 'N/A')}")
+        f.write(f"\n;SLOPE_0_X\t{params.get('SLOPE_0_X', 'N/A')}")
+        f.write(f"\n;SLOPE_1_X\t{params.get('SLOPE_1_X', 'N/A')}")
+        f.write(f"\n;M_CLAMP\t{params.get('M_CLAMP', 'N/A')}")
 
 
 def generate_all_luts(config_file='tire_parameters.toml'):
-    """Generate all four LUT files for front and rear tires"""
+    """Generate all LUT files based on configurations in the TOML file"""
     print("Tire LUT Generator")
-    
-    # Load parameters from TOML file
-    front_params, rear_params, base_path, ranges = load_parameters(config_file)
-    print("\nLoaded parameters from", config_file)
-    
+
+    # Load the entire configuration
+    config = load_parameters(config_file)
+    print(f"\nLoaded configuration from {config_file}")
+
+    # Extract base_path and ranges, handle potential KeyError
+    try:
+        base_path = config['base_path']
+        ranges = config['ranges']
+        base_dir = base_path.get('path', '.') # Default to current dir if 'path' is missing
+    except KeyError as e:
+        print(f"Error: Missing required section in {config_file}: {e}")
+        exit(1)
+
     # Get input values
     x_values = generate_input_values(ranges)
-    
-    # Generate all four files
-    tire_configs = [
-        ("front_lat", f"{base_path['path']}/{base_path['front_tire_lat_file']}", front_params, True),
-        ("front_long", f"{base_path['path']}/{base_path['front_tire_long_file']}", front_params, False),
-        ("rear_lat", f"{base_path['path']}/{base_path['rear_tire_lat_file']}", rear_params, True),
-        ("rear_long", f"{base_path['path']}/{base_path['rear_tire_long_file']}", rear_params, False)
-    ]
-    
-    for name, filename, params, is_lateral in tire_configs:
+
+    # Dynamically build the list of tire configurations to generate
+    tire_configs_to_generate = []
+    for section_name, params in config.items():
+        # Identify tire parameter sections (e.g., front_tire_0, rear_tire_1)
+        if section_name.startswith("front_tire_") or section_name.startswith("rear_tire_"):
+            print(f"Found tire configuration: {section_name}")
+
+            # Construct expected keys for LUT filenames in base_path
+            lat_file_key = f"{section_name}_lat_file"
+            long_file_key = f"{section_name}_long_file"
+
+            # Check if filenames are defined in base_path
+            if lat_file_key not in base_path:
+                print(f"Warning: Lateral LUT filename key '{lat_file_key}' not found in [base_path] for {section_name}. Skipping lateral LUT.")
+            else:
+                lat_filename = os.path.join(base_dir, base_path[lat_file_key])
+                tire_configs_to_generate.append((f"{section_name}_lat", lat_filename, params, True))
+
+            if long_file_key not in base_path:
+                print(f"Warning: Longitudinal LUT filename key '{long_file_key}' not found in [base_path] for {section_name}. Skipping longitudinal LUT.")
+            else:
+                long_filename = os.path.join(base_dir, base_path[long_file_key])
+                tire_configs_to_generate.append((f"{section_name}_long", long_filename, params, False))
+
+    if not tire_configs_to_generate:
+        print("\nError: No tire configurations found or no corresponding LUT filenames defined in [base_path].")
+        exit(1)
+
+    # Generate all found LUT files
+    for name, filename, params, is_lateral in tire_configs_to_generate:
         # Calculate outputs
-        if is_lateral:
-            outputs = [calculate_lateral(x, params) for x in x_values]
-        else:
-            outputs = [calculate_longitudinal(x, params) for x in x_values]
-        
+        try:
+            if is_lateral:
+                outputs = [calculate_lateral(x, params) for x in x_values]
+            else:
+                outputs = [calculate_longitudinal(x, params) for x in x_values]
+        except KeyError as e:
+             print(f"\nError: Missing parameter {e} in section '{name.split('_')[0]}_{name.split('_')[1]}'. Skipping {name} LUT.")
+             continue # Skip to the next configuration
+
         # Write the file
         write_lut_file(filename, x_values, outputs, params)
         print(f"\nGenerated {name} LUT: {filename}")
