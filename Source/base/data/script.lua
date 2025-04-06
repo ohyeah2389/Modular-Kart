@@ -75,11 +75,15 @@ end
 
 ac.onCarJumped(0, script.reset)
 
+local useLimiter = ac.INIConfig.load("engine.ini"):get("ENGINE_DATA", "LIMITER", 20000) < 10000 and true or false
+
 -- Run by game every physics tick (~333 Hz)
 ---@diagnostic disable-next-line: duplicate-set-field
 function script.update(dt)
     ac.awakeCarPhysics()
-    ac.disableEngineLimiter(true)
+    if not useLimiter then
+        ac.disableEngineLimiter()
+    end
 
     brakeAutoHold()
 
