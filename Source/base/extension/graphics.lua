@@ -78,6 +78,7 @@ local partConfigurations = {
             [0] = {"OTK M6 Nosecone"},
             [1] = {"KG506 Nosecone"},
             [2] = {"KG Buru Nosecone"},
+            [3] = {"KG FP7 Nosecone"},
             [100] = {} -- hide all
         }
     },
