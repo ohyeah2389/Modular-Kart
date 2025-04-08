@@ -65,10 +65,11 @@ local partConfigurations = {
         setupKeySuffix = '.nassau',
         options = {
             [0] = {"OTK M7 Nassau"},
-            [1] = {"KG508_Nassau"},
-            [2] = {"Eurostar Dynamica Nassau"},
-            [3] = {"MetalFairingNassau"},
-            [4] = {"KG Buru Nassau"},
+            [1] = {"OTK M6 Nassau"},
+            [2] = {"KG508_Nassau"},
+            [3] = {"Eurostar Dynamica Nassau"},
+            [4] = {"MetalFairingNassau"},
+            [5] = {"KG Buru Nassau"},
             [100] = {} -- hide all
         }
     },
