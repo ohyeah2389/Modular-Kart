@@ -32,6 +32,18 @@ function DriverAnimator:initialize()
             endstopRate = 40
         },
 
+        bodyLong = Physics {
+            posMax = 0.9,
+            posMin = 0.1,
+            center = 0.5,
+            mass = 3,
+            frictionCoef = 0.6,
+            springCoef = 50,
+            forceMax = 50,
+            constantForce = 0,
+            endstopRate = 40
+        },
+
         neckTurn = Physics {
             posMax = 0.2,
             posMin = -0.2,
@@ -375,14 +387,17 @@ driverArm_L_hand:storeCurrentTransformation()
 local driverHips = ac.findNodes("DRIVER:RIG_Hips")
 driverHips:storeCurrentTransformation()
 
+local driverCenter = ac.findNodes("DRIVER:RIG_Center")
+driverCenter:storeCurrentTransformation()
 
-local function driverIK(dt)
+
+local function driverIK(self, dt)
     local handTargetSteerClamp = math.clamp(car.steer, -90, 90)
     local steerAngleRad = math.rad(handTargetSteerClamp)
 
     -- Define rotation parameters for hand target on wheel
-    local rotationOrigin = vec3(0, 0.446, 0.117)  -- Center of rotation
-    local rotationRadius = -0.19                  -- Distance from origin (tune this value)
+    local rotationOrigin = vec3(0, 0.47, 0.15)  -- Center of rotation
+    local rotationRadius = -0.19                  -- Distance from origin
     local rotationAxisLook = vec3(0, 1, -1)         -- Axis to rotate around (e.g., positive X)
     local rotationAxisInitialUp = vec3(1, 0, 0):normalize()   -- Direction corresponding to 0 angle (e.g., negative Z)
 
@@ -403,10 +418,78 @@ local function driverIK(dt)
     local handTargetPos_R = rotationOrigin + relativePos
     local handTargetPos_L = rotationOrigin - relativePos
 
-    driverHips:setOrientation(vec3(0.1 * (-car.steer/90), (self.states.handUp.progress * -1.6) - ((math.sin(math.rad(math.abs(car.steer)))^2) * 0.1) - 0.3, 1), vec3(0.05 * (-car.steer/90), 0, 1))
+    ikSolver_fabrik({
+        baseRef = driverArm_R_clavicle,
+        arm1Ref = driverArm_R_upper,
+        arm2Ref = driverArm_R_forearm,
+        tipRef = driverArm_R_forearmEnd,
+        targetPosPlatform = handTargetPos_R,
+        iterations = 20,
+        tolerance = 0.001,
+        arm1Convention = "Y_Fwd_Z_Up",
+        arm2Convention = "Y_Fwd_Z_Up",
+        treeDepth = 6,
+        debug = false,
+
+        -- Shoulder Constraint (Cone)
+        arm1ConstraintType = "cone",
+        arm1ConeAxisLocal = vec3(-0.5 + (self.states.handUp.progress * 0.3 * helpers.mapRange(car.steer, 0, -90, 0, 1, true)), 0.1 - helpers.mapRange(car.steer, -90, 0, -0.2, 0, true), 0.3 + helpers.mapRange(car.steer, 0, 90, 0, -0.4, true)):normalize(),
+        arm1MaxConeAngle = 5 + helpers.mapRange(car.steer, -90, 0, 40, 0, true) + helpers.mapRange(car.steer, 0, 90, 0, 5, true),
+        arm1MinTwistAngle = -120, -- Limit inward rotation
+        arm1MaxTwistAngle = -100,  -- Limit outward rotation
+
+        ---- Elbow Constraint (Hinge)
+        --arm2ConstraintType = "hinge",
+        --arm2HingeAxisLocal = vec3(1, 0, 0),
+        --arm2MinHingeAngle = -10,
+        --arm2MaxHingeAngle = 140,
+        --arm2MinTwistAngle = -200, -- Allow slight twist (optional)
+        --arm2MaxTwistAngle = -100   -- Allow slight twist (optional)
+    })
+
+    local arm1ConeAxisLocal_X = 0.3 + (self.states.handUp.progress * 0.3 * helpers.mapRange(car.steer, 0, -90, 0, 1, true)) + helpers.mapRange(car.steer, -90, 0, 0.8, 0, true)
+    local arm1ConeAxisLocal_Y = 0.0 + helpers.mapRange(car.steer, -90, 0, 0.4, 0, true) + helpers.mapRange(car.steer, 0, 90, 0, -0.2, true) + (self.states.handUp.progress * 0.6 * helpers.mapRange(car.steer, 0, 90, 0, 1, true))
+    local arm1ConeAxisLocal_Z = 0.3 + helpers.mapRange(car.steer, -90, 0, 0.4, 0, true) + (self.states.handUp.progress * 0.3 * helpers.mapRange(car.steer, 0, 90, 0, 1, true))
+
+    local arm1TargetTwistAngle = -100 + helpers.mapRange(car.steer, 0, 90, 0, 60, true) + helpers.mapRange(car.steer, -90, 0, -20, 0, true)
+
+    ikSolver_fabrik({
+        baseRef = driverArm_L_clavicle,
+        arm1Ref = driverArm_L_upper,
+        arm2Ref = driverArm_L_forearm,
+        tipRef = driverArm_L_forearmEnd,
+        targetPosPlatform = handTargetPos_L,
+        iterations = 20,
+        tolerance = 0.001,
+        arm1Convention = "Y_Fwd_Z_Up",
+        arm2Convention = "Y_Fwd_Z_Up",
+        treeDepth = 6,
+        debug = false,
+
+        -- Shoulder Constraint (Cone)
+        arm1ConstraintType = "cone",
+        arm1ConeAxisLocal = vec3(arm1ConeAxisLocal_X, arm1ConeAxisLocal_Y, arm1ConeAxisLocal_Z):normalize(),
+        arm1MaxConeAngle = 6 + helpers.mapRange(-car.steer, -90, 0, 40, 0, true) + helpers.mapRange(-car.steer, 0, 90, 0, 5, true),
+        arm1MinTwistAngle = arm1TargetTwistAngle, -- Limit inward rotation
+        arm1MaxTwistAngle = arm1TargetTwistAngle - 0.2,  -- Limit outward rotation
+
+        ---- Elbow Constraint (Hinge)
+        --arm2ConstraintType = "hinge",
+        --arm2HingeAxisLocal = vec3(1, 0, 0),
+        --arm2MinHingeAngle = -10,
+        --arm2MaxHingeAngle = 140,
+        --arm2MinTwistAngle = -200, -- Allow slight twist (optional)
+        --arm2MaxTwistAngle = -100   -- Allow slight twist (optional)
+    })
 
     driverArm_R_forearmEnd:setRotation(vec3(0, 1, 0), math.rad(20 + helpers.mapRange(car.steer, 0, 90, 0, -120, true) + helpers.mapRange(car.steer, -90, 0, 60, 0, true)))
-    driverArm_R_hand:setOrientation(vec3(0, -0.2 + (math.clamp(car.steer, 0, 90) * 0.005), 1))
+    driverArm_R_hand:setOrientation(vec3(0, -0.3 + (math.clamp(car.steer, 0, 90) * 0.005), 1))
+
+    driverArm_L_forearmEnd:setRotation(vec3(0, 1, 0), math.rad(20 + helpers.mapRange(car.steer, 0, 90, 0, -120, true) + helpers.mapRange(car.steer, -90, 0, 60, 0, true)))
+    local hand_L_x = -0.3 + helpers.mapRange(car.steer, -90, 0, -0.4, 0, true)
+    local hand_L_y = -0.4 + helpers.mapRange(car.steer, 0, 90, 0, 0.6, true) + helpers.mapRange(car.steer, -90, 0, 1, 0, true)
+    local hand_L_z = 1
+    driverArm_L_hand:setOrientation(vec3(hand_L_x, hand_L_y, hand_L_z), vec3(0 + helpers.mapRange(car.steer, -90, 0, -0.5, 0, true), 1, 0))
 end
 
 
@@ -472,16 +555,14 @@ function DriverAnimator:update(dt, antiResetAdder)
     local legRForce = (car.acceleration.x * self.physicsObjects.legR.mass + (breathSineHarmonic2 * 0.04) + (breathSine * 0.1))
     local bodyLatForce = (car.acceleration.x * self.physicsObjects.bodyLat.mass + (breathSineHarmonic * 0.02))
     local bodyVertForce = (-car.acceleration.y * self.physicsObjects.bodyVert.mass + (breathSine * 0.2))
+    local bodyLongForce = (car.acceleration.z * self.physicsObjects.bodyLong.mass + (breathSineHarmonic * 0.02))
 
     local legLAnimPos = self.physicsObjects.legL:step(legLForce, dt)
     local legRAnimPos = self.physicsObjects.legR:step(legRForce, dt)
 
     local neckTurnAnimPos = self.physicsObjects.neckTurn:step(car.steer * 0.05, dt)
-    local neckTiltLatAnimPos = self.physicsObjects.neckTiltLat:step(
-        (car.acceleration.x * 0.65) + (car.steer * 0.035 * helpers.mapRange(math.abs(car.speedKmh), 0, 80, 0.1, 1, true)),
-        dt)
-    local neckTiltLongAnimPos = self.physicsObjects.neckTiltLong:step(
-        (car.acceleration.z * 1) + (car.acceleration.y * -1), dt)
+    local neckTiltLatAnimPos = self.physicsObjects.neckTiltLat:step((car.acceleration.x * 0.65) + (car.steer * 0.035 * helpers.mapRange(math.abs(car.speedKmh), 0, 80, 0.1, 1, true)),dt)
+    local neckTiltLongAnimPos = self.physicsObjects.neckTiltLong:step((car.acceleration.z * 1) + (car.acceleration.y * -1), dt)
 
     local legLPos = legLAnimPos
     local legRPos = legRAnimPos
@@ -490,18 +571,34 @@ function DriverAnimator:update(dt, antiResetAdder)
     ac.debug("bodyLat force", self.physicsObjects.bodyLat.force)
     ac.debug("bodyVert position", self.physicsObjects.bodyVert.position)
     ac.debug("bodyVert force", self.physicsObjects.bodyVert.force)
+    ac.debug("bodyLong position", self.physicsObjects.bodyLong.position)
+    ac.debug("bodyLong force", self.physicsObjects.bodyLong.force)
     ac.debug("legL position", self.physicsObjects.legL.position)
     ac.debug("legL force", self.physicsObjects.legL.force)
     ac.debug("legR position", self.physicsObjects.legR.position)
     ac.debug("legR force", self.physicsObjects.legR.force)
 
     -- Update vertical and lateral baked animations
-    self.nodes.model.node:setAnimation("../animations/latG.ksanim",
-        math.clamp(self.physicsObjects.bodyLat:step(bodyLatForce, dt), 0.02, 0.98) + (breathSineHarmonic * 0.005) +
-        ((antiResetAdder - 0.5) * 0.005))
-    self.nodes.model.node:setAnimation("../animations/vertG.ksanim",
-        math.clamp(self.physicsObjects.bodyVert:step(bodyVertForce, dt), 0.02, 0.98) + (breathSine * 0.01) +
-        ((antiResetAdder - 0.5) * 0.005))
+    --self.nodes.model.node:setAnimation("../animations/latG.ksanim",
+    --    math.clamp(self.physicsObjects.bodyLat:step(bodyLatForce, dt), 0.02, 0.98) + (breathSineHarmonic * 0.005) +
+    --    ((antiResetAdder - 0.5) * 0.005))
+    --self.nodes.model.node:setAnimation("../animations/vertG.ksanim",
+    --    math.clamp(self.physicsObjects.bodyVert:step(bodyVertForce, dt), 0.02, 0.98) + (breathSine * 0.01) +
+    --    ((antiResetAdder - 0.5) * 0.005))
+
+    local bodyLatPos = self.physicsObjects.bodyLat:step(bodyLatForce, dt) - 0.5
+    local bodyVertPos = self.physicsObjects.bodyVert:step(bodyVertForce, dt) - 0.5
+    local bodyLongPos = self.physicsObjects.bodyLong:step(bodyLongForce, dt) - 0.5
+    driverCenter:setPosition(vec3(0.045 + bodyLatPos * 0.02, 0.09 + bodyVertPos * 0.05, -0.16 + bodyLongPos * 0.02))
+    
+    local hipsOrientX = 0.1 * (-car.steer/90) + bodyLatPos * -0.05
+    local hipsOrientY = (self.states.handUp.progress * -1.6) - ((math.sin(math.rad(math.abs(car.steer)))^2) * 0.2) - 0.3 - bodyLongPos
+    local hipsOrientZ = 1
+    local hipsUpX = 0.05 * (-car.steer/90)
+    local hipsUpY = 0
+    local hipsUpZ = 1
+    
+    driverHips:setOrientation(vec3(hipsOrientX, hipsOrientY, hipsOrientZ), vec3(hipsUpX, hipsUpY, hipsUpZ))
 
     -- Update feet
     self.nodes.foot.L.node:setOrientation(
@@ -515,12 +612,12 @@ function DriverAnimator:update(dt, antiResetAdder)
 
     -- Update neck
     self.nodes.neck.node:setOrientation(
-        self.nodes.neck.forward + vec3(0, 0 + (self.states.handUp.progress * 0.3), 0),
+        self.nodes.neck.forward + vec3(0, 0 + (self.states.handUp.progress * 0.3), bodyLongPos * 2),
         self.nodes.neck.up + vec3(0, 0, 0)
     )
 
     self.nodes.head.node:setOrientation(
-        self.nodes.head.forward + vec3(neckTurnAnimPos, neckTiltLongAnimPos * -2 + (self.states.handUp.progress * 0.2), 0),
+        self.nodes.head.forward + vec3(neckTurnAnimPos, neckTiltLongAnimPos * -2 + (self.states.handUp.progress * 0.3), 0),
         self.nodes.head.up + vec3(neckTiltLatAnimPos, 0, neckTiltLongAnimPos * -2)
     )
 
@@ -584,6 +681,9 @@ function DriverAnimator:update(dt, antiResetAdder)
             end
         end
     end
+
+    -- Run IK for arms
+    driverIK(self, dt)
 
     -- Animation handUp
     if false and (self.states.handUp.active or self.states.handUp.rewinding) and self.states.handUp.progress > 0 then
