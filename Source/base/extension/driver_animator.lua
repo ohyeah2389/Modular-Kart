@@ -577,6 +577,15 @@ function DriverAnimator:update(dt, antiResetAdder)
     ac.debug("legL force", self.physicsObjects.legL.force)
     ac.debug("legR position", self.physicsObjects.legR.position)
     ac.debug("legR force", self.physicsObjects.legR.force)
+    ac.debug("neckTurn position", self.physicsObjects.neckTurn.position)
+    ac.debug("neckTurn force", self.physicsObjects.neckTurn.force)
+    ac.debug("neckTiltLat position", self.physicsObjects.neckTiltLat.position)
+    ac.debug("neckTiltLat force", self.physicsObjects.neckTiltLat.force)
+    ac.debug("neckTiltLong position", self.physicsObjects.neckTiltLong.position)
+    ac.debug("neckTiltLong force", self.physicsObjects.neckTiltLong.force)
+    ac.debug("neckTurnAnimPos", neckTurnAnimPos)
+    ac.debug("neckTiltLatAnimPos", neckTiltLatAnimPos)
+    ac.debug("neckTiltLongAnimPos", neckTiltLongAnimPos)
 
     -- Update vertical and lateral baked animations
     --self.nodes.model.node:setAnimation("../animations/latG.ksanim",
@@ -589,7 +598,7 @@ function DriverAnimator:update(dt, antiResetAdder)
     local bodyLatPos = self.physicsObjects.bodyLat:step(bodyLatForce, dt) - 0.5
     local bodyVertPos = self.physicsObjects.bodyVert:step(bodyVertForce, dt) - 0.5
     local bodyLongPos = self.physicsObjects.bodyLong:step(bodyLongForce, dt) - 0.5
-    driverCenter:setPosition(vec3(0.045 + bodyLatPos * 0.02, 0.09 + bodyVertPos * 0.05, -0.16 + bodyLongPos * 0.02))
+    driverCenter:setPosition(vec3(0.045 + bodyLatPos * 0.02, 0.09 + bodyVertPos * 0.03, -0.16 + bodyLongPos * 0.02))
     
     local hipsOrientX = 0.1 * (-car.steer/90) + bodyLatPos * -0.05
     local hipsOrientY = (self.states.handUp.progress * -1.6) - ((math.sin(math.rad(math.abs(car.steer)))^2) * 0.2) - 0.3 - bodyLongPos
