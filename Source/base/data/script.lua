@@ -11,6 +11,7 @@ local clutch = require('script_clutch')
 local drivetrain = require('script_drivetrain')
 local sharedData = require('script_sharedData')
 local ffb = require('script_ffb')
+local throttle = require('script_throttle')
 
 
 local lastDebugTime = os.clock()
@@ -39,26 +40,27 @@ local jetLowOpen = ac.ControlButton("__EXT_LIGHT_JETLOW_OPEN")
 
 
 jetHighClose:onPressed(function()
-    state.engine.highSpeedJet = math.max(0, math.min(8, state.engine.highSpeedJet - 1/16))
+    state.engine.highSpeedJet = math.max(0, math.min(8, state.engine.highSpeedJet - 1 / 16))
 end)
 
 jetHighOpen:onPressed(function()
-    state.engine.highSpeedJet = math.max(0, math.min(8, state.engine.highSpeedJet + 1/16))
+    state.engine.highSpeedJet = math.max(0, math.min(8, state.engine.highSpeedJet + 1 / 16))
 end)
 
 jetLowClose:onPressed(function()
-    state.engine.lowSpeedJet = math.max(0, math.min(8, state.engine.lowSpeedJet - 1/16))
+    state.engine.lowSpeedJet = math.max(0, math.min(8, state.engine.lowSpeedJet - 1 / 16))
 end)
 
 jetLowOpen:onPressed(function()
-    state.engine.lowSpeedJet = math.max(0, math.min(8, state.engine.lowSpeedJet + 1/16))
+    state.engine.lowSpeedJet = math.max(0, math.min(8, state.engine.lowSpeedJet + 1 / 16))
 end)
 
 
 local function brakeAutoHold()
     if game.car_cphys.speedKmh < config.misc.brakeAutoHold.speed and not (game.car_cphys.gas > 0.05) then
-        ac.overrideBrakesTorque(2, config.misc.brakeAutoHold.torque, config.misc.brakeAutoHold.torque)
-        ac.overrideBrakesTorque(3, config.misc.brakeAutoHold.torque, config.misc.brakeAutoHold.torque)
+        --ac.overrideBrakesTorque(2, config.misc.brakeAutoHold.torque, config.misc.brakeAutoHold.torque) -- not functional due to ext brakes
+        --ac.overrideBrakesTorque(3, config.misc.brakeAutoHold.torque, config.misc.brakeAutoHold.torque) -- not functional due to ext brakes
+        game.car_cphys.brake = math.max(0.1, game.car_cphys.brake) -- instead, we use this
         ac.debug("brakeAutoHold", "brakes engaged")
     else
         ac.overrideBrakesTorque(2, math.nan, math.nan)
@@ -75,6 +77,7 @@ end
 
 ac.onCarJumped(0, script.reset)
 
+-- check for limiter being lower than threshold for LO206, etc
 local useLimiter = ac.INIConfig.load("engine.ini"):get("ENGINE_DATA", "LIMITER", 20000) < 10000 and true or false
 
 -- Run by game every physics tick (~333 Hz)
@@ -92,6 +95,8 @@ function script.update(dt)
     --drivetrain.update(dt)
     --clutch.update(dt)
     ffb.update(dt)
+
+    throttle.update(dt)
 
     --ac.overrideGasInput(1) -- physics gas input is required to be 1 at all times to correctly "override" stock engine model
     --ac.disableEngineLimiter(true)
