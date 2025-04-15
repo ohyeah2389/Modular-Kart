@@ -141,6 +141,9 @@ function KartAnimator:initialize()
             tierodRTarget = { node = "DIR2_anim_tierodRF" },
             tierodLControl = { node = "DIR_anim_tierodLF" },
             tierodRControl = { node = "DIR_anim_tierodRF" }
+        },
+        rearAxle = {
+            axleNode = { node = "RearAxle" },
         }
     }
 
@@ -166,6 +169,14 @@ function KartAnimator:initialize()
     -- Initialize steering nodes
     for _, part in pairs(self.nodes.steering) do
         part.node = ac.findNodes(part.node)
+    end
+
+    -- Initialize rear axle nodes
+    for _, part in pairs(self.nodes.rearAxle) do
+        part.node = ac.findNodes(part.node)
+        part.node:storeCurrentTransformation()
+        part.forward = part.node:getLook()
+        part.up = part.node:getUp()
     end
 end
 
@@ -227,6 +238,9 @@ function KartAnimator:update(dt, angularAcceleration)
         self.nodes.pedals.gas.forward + vec3(0, 0, car.gas * 0.4),
         self.nodes.pedals.gas.up
     )
+
+    -- Rotate rear axle
+    self.nodes.rearAxle.axleNode.node:rotate(vec3(-1, 0, 0), car.wheels[3].angularSpeed * dt)
 end
 
 return KartAnimator 
