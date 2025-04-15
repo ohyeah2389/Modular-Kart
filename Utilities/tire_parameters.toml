@@ -1,17 +1,17 @@
 # Tire Parameters Configuration
 
 [front_tire_0]
-REF_M	=	1.95
+REF_M	=	1.9
 SLOPE_0	=	3.4
 SLOPE_1	=	6
-ADHESION	=	10
+ADHESION	=	5
 X_MULT	=	1.7
 SLOPE_0_X	=	1.5
 SLOPE_1_X	=	1.2
 M_CLAMP	=	5
 
 [rear_tire_0]
-REF_M	=	1.95
+REF_M	=	2.0
 SLOPE_0	=	3.0
 SLOPE_1	=	6
 ADHESION	=	10
