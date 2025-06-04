@@ -19,7 +19,7 @@ Please read the LICENSE file for information on the license this code is provide
 ## Requirements:
 
 - A legal copy of Assetto Corsa
-- Custom Shaders Patch v0.2.6 or later installed and configured properly (see warnings below)
+- Custom Shaders Patch v0.2.9 or later installed and configured properly (see warnings below)
 
 ## Installation:
 
