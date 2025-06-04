@@ -25,6 +25,9 @@ import json
 from datetime import datetime
 import fnmatch
 from typing import List, Optional
+import configparser
+import subprocess
+import tempfile
 
 try:
     import tomllib
@@ -143,7 +146,7 @@ def update_ui_json(ui_json_path, version, year):
     data["version"] = version
     data["year"] = year
     now_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-    append_text = f" Car compiled on {now_str}."
+    append_text = f"<br><br>Car compiled on {now_str}."
     if "description" in data and isinstance(data["description"], str):
         data["description"] += append_text
     else:
@@ -205,21 +208,78 @@ def handle_sfx_files(car_build_dir, car_name):
                 print(f"Error handling sfx files: {e}")
             break
 
+def merge_ini_files(base_ini_path, addon_ini_path, output_path):
+    """
+    Merge an addon INI file into a base INI file.
+    The addon INI can contain partial sections that will override
+    corresponding sections in the base INI.
+    """
+    try:
+        # Create parsers for both files
+        base_config = configparser.ConfigParser()
+        addon_config = configparser.ConfigParser()
+        
+        # Preserve case sensitivity and allow duplicate keys
+        base_config.optionxform = str
+        addon_config.optionxform = str
+        
+        # Read the base INI file
+        base_config.read(base_ini_path, encoding='utf-8')
+        
+        # Read the addon INI file
+        addon_config.read(addon_ini_path, encoding='utf-8')
+        
+        # Merge addon sections into base config
+        for section_name in addon_config.sections():
+            if not base_config.has_section(section_name):
+                # If section doesn't exist in base, add it entirely
+                base_config.add_section(section_name)
+            
+            # Override/add all options from addon section
+            for option_name, option_value in addon_config.items(section_name):
+                base_config.set(section_name, option_name, option_value)
+        
+        # Write the merged result
+        with open(output_path, 'w', encoding='utf-8') as f:
+            base_config.write(f, space_around_delimiters=False)
+        
+        print(f"Merged INI: {os.path.basename(addon_ini_path)} -> {os.path.basename(output_path)}")
+        
+    except Exception as e:
+        print(f"Error merging INI files {base_ini_path} + {addon_ini_path}: {e}")
+
 def merge_directories(src, dst, ignore_patterns):
     """
     Recursively merge contents of src directory into dst directory.
     Files from src will overwrite those in dst.
     Skips files matching ignore patterns.
+    Special handling for .addon.ini files which are merged with their base INI files.
     """
     if not os.path.exists(dst):
         os.makedirs(dst)
+    
+    # First pass: collect .addon.ini files for processing
+    addon_files = {}
+    regular_files = []
+    
     for item in os.listdir(src):
         s_item = os.path.join(src, item)
         if should_ignore_file(s_item, ignore_patterns):
             print(f"Skipping ignored file/folder '{item}'")
             continue
-            
+        
+        if item.endswith('.addon.ini'):
+            # Map addon file to its base name
+            base_name = item.replace('.addon.ini', '.ini')
+            addon_files[base_name] = s_item
+        else:
+            regular_files.append(item)
+    
+    # Second pass: process regular files and handle INI merging
+    for item in regular_files:
+        s_item = os.path.join(src, item)
         d_item = os.path.join(dst, item)
+        
         try:
             if os.path.isdir(s_item):
                 if not os.path.exists(d_item):
@@ -228,10 +288,187 @@ def merge_directories(src, dst, ignore_patterns):
                 else:
                     merge_directories(s_item, d_item, ignore_patterns)
             else:
-                shutil.copy2(s_item, d_item)
-                print(f"Overwritten file '{item}' from source merge.")
+                # Check if this file has a corresponding .addon.ini file
+                if item.endswith('.ini') and item in addon_files:
+                    # This is a base INI file with an addon - merge them
+                    addon_path = addon_files[item]
+                    merge_ini_files(s_item, addon_path, d_item)
+                else:
+                    # Regular file copy
+                    shutil.copy2(s_item, d_item)
+                    print(f"Overwritten file '{item}' from source merge.")
         except Exception as e:
             print(f"Error merging {s_item} into {d_item}: {e}")
+    
+    # Third pass: handle .addon.ini files that don't have corresponding base files
+    for base_name, addon_path in addon_files.items():
+        base_exists_in_src = os.path.exists(os.path.join(src, base_name))
+        base_exists_in_dst = os.path.exists(os.path.join(dst, base_name))
+        
+        if not base_exists_in_src and base_exists_in_dst:
+            # Addon file exists but no base file in src - merge with existing dst file
+            d_item = os.path.join(dst, base_name)
+            try:
+                merge_ini_files(d_item, addon_path, d_item)
+            except Exception as e:
+                print(f"Error merging addon {addon_path} with existing {d_item}: {e}")
+        elif not base_exists_in_src and not base_exists_in_dst:
+            # No base file anywhere - treat addon as the complete file
+            d_item = os.path.join(dst, base_name)
+            try:
+                shutil.copy2(addon_path, d_item)
+                print(f"Copied addon file '{os.path.basename(addon_path)}' as '{base_name}' (no base file found)")
+            except Exception as e:
+                print(f"Error copying addon file {addon_path}: {e}")
+
+def pack_data_folder(car_build_dir, car_name):
+    """
+    Uses QuickBMS with the rebuilder script to pack the data folder into data.acd,
+    then deletes the original data folder.
+    """
+    script_dir = os.path.dirname(os.path.abspath(__file__))
+    quickbms_path = os.path.join(script_dir, "quickbms.exe")
+    rebuilder_script = os.path.join(script_dir, "assetto_corsa_acd_rebuilder.bms")
+    data_dir = os.path.join(car_build_dir, "data")
+    
+    # Check if QuickBMS and the rebuilder script exist
+    if not os.path.exists(quickbms_path):
+        print(f"Warning: QuickBMS not found at {quickbms_path}. Skipping data packing for {car_name}")
+        return False
+    
+    if not os.path.exists(rebuilder_script):
+        print(f"Warning: Rebuilder script not found at {rebuilder_script}. Skipping data packing for {car_name}")
+        return False
+    
+    if not os.path.exists(data_dir):
+        print(f"Warning: Data folder not found for {car_name}. Skipping data packing.")
+        return False
+    
+    try:
+        # Create a simple temp directory structure
+        with tempfile.TemporaryDirectory() as temp_base:
+            # Create the car folder structure
+            temp_car_dir = os.path.join(temp_base, car_name)
+            os.makedirs(temp_car_dir)
+            
+            # Copy data folder contents directly to the car folder (not in a data subfolder)
+            print(f"Copying data files to temporary location: {temp_car_dir}")
+            for item in os.listdir(data_dir):
+                src_item = os.path.join(data_dir, item)
+                dst_item = os.path.join(temp_car_dir, item)
+                if os.path.isfile(src_item):
+                    shutil.copy2(src_item, dst_item)
+                else:
+                    shutil.copytree(src_item, dst_item)
+            
+            # Create a minimal dummy data.acd file
+            temp_acd = os.path.join(temp_car_dir, "data.acd")
+            with open(temp_acd, 'wb') as f:
+                f.write(b'\x00' * 16)  # Create minimal dummy file
+            
+            # Run QuickBMS directly in the car folder
+            cmd = [
+                quickbms_path,
+                rebuilder_script,
+                "data.acd",
+                "."
+            ]
+            
+            print(f"Packing data folder for {car_name}...")
+            print(f"Command: {' '.join(cmd)} (in directory: {temp_car_dir})")
+            
+            # Change working directory to the temp car folder
+            original_cwd = os.getcwd()
+            os.chdir(temp_car_dir)
+            
+            try:
+                result = subprocess.run(cmd, capture_output=True, text=True)
+            finally:
+                # Always restore original working directory
+                os.chdir(original_cwd)
+            
+            # Print QuickBMS output for debugging
+            if result.stdout:
+                print("QuickBMS stdout:")
+                print(result.stdout)
+            if result.stderr:
+                print("QuickBMS stderr:")
+                print(result.stderr)
+            
+            if result.returncode == 0:
+                # Look for the generated .rebuilt file
+                rebuilt_files = []
+                for root, dirs, files in os.walk(temp_base):
+                    for file in files:
+                        if file.endswith('.rebuilt'):
+                            rebuilt_files.append(os.path.join(root, file))
+                
+                if rebuilt_files:
+                    # Move the .rebuilt file to data.acd in the original location
+                    rebuilt_file = rebuilt_files[0]
+                    final_acd = os.path.join(car_build_dir, "data.acd")
+                    shutil.move(rebuilt_file, final_acd)
+                    
+                    # Remove the original data folder
+                    shutil.rmtree(data_dir)
+                    
+                    print(f"Successfully packed data folder for {car_name} -> data.acd")
+                    return True
+                else:
+                    print(f"Error: No .rebuilt file generated for {car_name}")
+                    return False
+            else:
+                print(f"Error packing data for {car_name}: QuickBMS returned code {result.returncode}")
+                return False
+                
+    except Exception as e:
+        print(f"Error packing data folder for {car_name}: {e}")
+        return False
+
+def debug_directory_scan(data_dir):
+    """
+    Debug function to see what files are actually in the directory
+    and test if there are any problematic files.
+    """
+    print(f"DEBUG: Scanning directory {data_dir}")
+    try:
+        files = os.listdir(data_dir)
+        print(f"DEBUG: Found {len(files)} items")
+        
+        for file in sorted(files):
+            file_path = os.path.join(data_dir, file)
+            try:
+                if os.path.isfile(file_path):
+                    size = os.path.getsize(file_path)
+                    # Check for non-ASCII characters
+                    try:
+                        file.encode('ascii')
+                        ascii_ok = "✓"
+                    except UnicodeEncodeError:
+                        ascii_ok = "✗ (non-ASCII)"
+                    
+                    print(f"  FILE: {file} ({size} bytes) {ascii_ok}")
+                else:
+                    print(f"  DIR:  {file}/")
+            except Exception as e:
+                print(f"  ERROR: {file} - {e}")
+                
+        # Check for hidden files on Windows
+        try:
+            import subprocess
+            result = subprocess.run(['dir', '/a', data_dir], 
+                                  capture_output=True, text=True, shell=True)
+            hidden_files = [line for line in result.stdout.split('\n') 
+                          if 'ro.ini' in line.lower()]
+            if hidden_files:
+                print(f"DEBUG: Found ro.ini references in dir output:")
+                for line in hidden_files:
+                    print(f"  {line.strip()}")
+        except:
+            pass
+            
+    except Exception as e:
+        print(f"DEBUG: Error scanning directory: {e}")
 
 def main():
     # Get the directory in which the script is located
@@ -352,6 +589,9 @@ def main():
                 update_ui_json(ui_json_path, info_version, info_year)
             else:
                 print(f"Warning: 'ui/ui_car.json' not found for {car_name}")
+            
+            # Pack the data folder into data.acd
+            pack_data_folder(car_build_dir, car_name)
     
     print("\nBuild process complete.")
 
