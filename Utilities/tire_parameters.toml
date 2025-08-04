@@ -2,43 +2,23 @@
 
 [front_tire_0]
 REF_M	=	1.95
-SLOPE_0	=	3.2
-SLOPE_1	=	5.5
-ADHESION	=	10
+SLOPE_0	=	4
+SLOPE_1	=	6.0
+ADHESION	=	15
 X_MULT	=	1.7
-SLOPE_0_X	=	1.5
-SLOPE_1_X	=	1.2
+SLOPE_0_X	=	2.0
+SLOPE_1_X	=	1.5
 M_CLAMP	=	5
 
 [rear_tire_0]
-REF_M	=	2.0
-SLOPE_0	=	2.8
-SLOPE_1	=	5.5
-ADHESION	=	15
+REF_M	=	2.00
+SLOPE_0	=	3.5
+SLOPE_1	=	6.0
+ADHESION	=	20
 X_MULT	=	1.7
-SLOPE_0_X	=	1.2
-SLOPE_1_X	=	1.2
+SLOPE_0_X	=	2.0
+SLOPE_1_X	=	1.5
 M_CLAMP	=	5
-
-[front_tire_1]
-REF_M	=	1.6
-SLOPE_0	=	3.4
-SLOPE_1	=	6
-ADHESION	=	10
-X_MULT	=	1.7
-SLOPE_0_X	=	1.2
-SLOPE_1_X	=	1.2
-M_CLAMP	=	5
-
-[rear_tire_1]
-REF_M	=	0.6
-SLOPE_0	=	-2
-SLOPE_1	=	20
-ADHESION	=	5
-X_MULT	=	1
-SLOPE_0_X	=	1
-SLOPE_1_X	=	1
-M_CLAMP	=	1
 
 [base_path]
 path = "../ohyeah2389_modkart_class2/data"
@@ -46,10 +26,6 @@ front_tire_0_lat_file = "tire_kart_sprint_front_lat.lut"
 front_tire_0_long_file = "tire_kart_sprint_front_long.lut"
 rear_tire_0_lat_file = "tire_kart_sprint_rear_lat.lut"
 rear_tire_0_long_file = "tire_kart_sprint_rear_long.lut"
-front_tire_1_lat_file = "tire_kart_drift_front_lat.lut"
-front_tire_1_long_file = "tire_kart_drift_front_long.lut"
-rear_tire_1_lat_file = "tire_kart_pvc_rear_lat.lut"
-rear_tire_1_long_file = "tire_kart_pvc_rear_long.lut"
 
 [ranges]
 by_twentys = 400
