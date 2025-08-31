@@ -599,14 +599,14 @@ function DriverAnimator:update(dt, antiResetAdder)
     local bodyVertPos = self.physicsObjects.bodyVert:step(bodyVertForce, dt) - 0.5
     local bodyLongPos = self.physicsObjects.bodyLong:step(bodyLongForce, dt) - 0.5
     driverCenter:setPosition(vec3(0.045 + bodyLatPos * 0.02, 0.09 + bodyVertPos * 0.03, -0.16 + bodyLongPos * 0.02))
-    
+
     local hipsOrientX = 0.1 * (-car.steer/90) + bodyLatPos * -0.05
     local hipsOrientY = (self.states.handUp.progress * -1.6) - ((math.sin(math.rad(math.abs(car.steer)))^2) * 0.2) - 0.3 - bodyLongPos
     local hipsOrientZ = 1
     local hipsUpX = 0.05 * (-car.steer/90)
     local hipsUpY = 0
     local hipsUpZ = 1
-    
+
     driverHips:setOrientation(vec3(hipsOrientX, hipsOrientY, hipsOrientZ), vec3(hipsUpX, hipsUpY, hipsUpZ))
 
     -- Update feet
