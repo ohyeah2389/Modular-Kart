@@ -58,28 +58,31 @@ local partConfigurations = {
         options = {
             [0] = {"SteeringWheelClassic"},
             [1] = {"SteeringWheelModern"},
-            [2] = {"SteeringWheelRetro"}
+            [2] = {"SteeringWheelOTK"},
+            [3] = {"SteeringWheelRetro"}
         }
     },
     nassau = {
         setupKeySuffix = '.nassau',
         options = {
-            [0] = {"OTK M7 Nassau"},
-            [1] = {"OTK M6 Nassau"},
-            [2] = {"KG508_Nassau"},
-            [3] = {"Eurostar Dynamica Nassau"},
-            [4] = {"MetalFairingNassau"},
-            [5] = {"KG Buru Nassau"},
+            [0] = {"OTK M11 Nassau"},
+            [1] = {"OTK M7 Nassau"},
+            [2] = {"OTK M6 Nassau"},
+            [3] = {"KG508_Nassau"},
+            [4] = {"Eurostar Dynamica Nassau"},
+            [5] = {"MetalFairingNassau"},
+            [6] = {"KG Buru Nassau"},
             [100] = {} -- hide all
         }
     },
     frontBumper = {
         setupKeySuffix = '.frontBumper',
         options = {
-            [0] = {"OTK M6 Nosecone"},
-            [1] = {"KG506 Nosecone"},
-            [2] = {"KG Buru Nosecone"},
-            [3] = {"KG FP7 Nosecone"},
+            [0] = {"OTK M11 Nosecone"},
+            [1] = {"OTK M6 Nosecone"},
+            [2] = {"KG506 Nosecone"},
+            [3] = {"KG Buru Nosecone"},
+            [4] = {"KG FP7 Nosecone"},
             [100] = {} -- hide all
         }
     },
