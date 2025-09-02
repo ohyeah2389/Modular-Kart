@@ -160,6 +160,12 @@ function script.update(dt)
             driverAnimator:setState("handUp", false, true)
         end
 
+        if car.extraD then
+            driverAnimator:setState("leanForward", true, true)
+        else
+            driverAnimator:setState("leanForward", false, true)
+        end
+
         driverAnimator:update(dt, antiResetAdder)
         kartAnimator:update(dt, angularAcceleration)
     end

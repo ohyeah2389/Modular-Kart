@@ -292,6 +292,15 @@ function DriverAnimator:initialize()
             timer = 0,
             held = false,
             rewinding = false,
+            transitionPoint = 0.5
+        },
+        leanForward = {
+            active = false,
+            progress = 0,
+            duration = 0.4,
+            timer = 0,
+            held = false,
+            rewinding = false,
             transitionPoint = 0.35
         }
     }
@@ -397,7 +406,7 @@ local function driverIK(self, dt)
 
     -- Define rotation parameters for hand target on wheel
     local rotationOrigin = vec3(0, 0.47, 0.15)  -- Center of rotation
-    local rotationRadius = -0.19                  -- Distance from origin
+    local rotationRadius = -0.18                  -- Distance from origin
     local rotationAxisLook = vec3(0, 1, -1)         -- Axis to rotate around (e.g., positive X)
     local rotationAxisInitialUp = vec3(1, 0, 0):normalize()   -- Direction corresponding to 0 angle (e.g., negative Z)
 
@@ -601,7 +610,7 @@ function DriverAnimator:update(dt, antiResetAdder)
     driverCenter:setPosition(vec3(0.045 + bodyLatPos * 0.02, 0.09 + bodyVertPos * 0.03, -0.16 + bodyLongPos * 0.02))
 
     local hipsOrientX = 0.1 * (-car.steer/90) + bodyLatPos * -0.05
-    local hipsOrientY = (self.states.handUp.progress * -1.6) - ((math.sin(math.rad(math.abs(car.steer)))^2) * 0.2) - 0.3 - bodyLongPos
+    local hipsOrientY = (self.states.leanForward.progress * -1.6) - ((math.sin(math.rad(math.abs(car.steer)))^2) * 0.2) - 0.3 - bodyLongPos
     local hipsOrientZ = 1
     local hipsUpX = 0.05 * (-car.steer/90)
     local hipsUpY = 0
@@ -621,12 +630,12 @@ function DriverAnimator:update(dt, antiResetAdder)
 
     -- Update neck
     self.nodes.neck.node:setOrientation(
-        self.nodes.neck.forward + vec3(0, 0 + (self.states.handUp.progress * 0.3), bodyLongPos * 2),
+        self.nodes.neck.forward + vec3(0, 0 + (self.states.leanForward.progress * 0.3), bodyLongPos * 2),
         self.nodes.neck.up + vec3(0, 0, 0)
     )
 
     self.nodes.head.node:setOrientation(
-        self.nodes.head.forward + vec3(neckTurnAnimPos, neckTiltLongAnimPos * -2 + (self.states.handUp.progress * 0.3), 0),
+        self.nodes.head.forward + vec3(neckTurnAnimPos, neckTiltLongAnimPos * -2 + (self.states.leanForward.progress * 0.3), 0),
         self.nodes.head.up + vec3(neckTiltLatAnimPos, 0, neckTiltLongAnimPos * -2)
     )
 
@@ -695,7 +704,7 @@ function DriverAnimator:update(dt, antiResetAdder)
     driverIK(self, dt)
 
     -- Animation handUp
-    if false and (self.states.handUp.active or self.states.handUp.rewinding) and self.states.handUp.progress > 0 then
+    if (self.states.handUp.active or self.states.handUp.rewinding) and self.states.handUp.progress > 0 then
         local forceX = car.acceleration.x * self.physicsObjects.handPhysics.x.mass
         local forceY = car.acceleration.y * self.physicsObjects.handPhysics.y.mass
         local forceZ = car.acceleration.z * self.physicsObjects.handPhysics.z.mass
