@@ -5,10 +5,6 @@
 local game = require('script_acConnection')
 local config = require('script_config')
 local state = require('script_state')
-local combustion = require('script_combustion')
-local starter = require('script_starter')
-local clutch = require('script_clutch')
-local drivetrain = require('script_drivetrain')
 local sharedData = require('script_sharedData')
 local ffb = require('script_ffb')
 local throttle = require('script_throttle')
@@ -16,11 +12,15 @@ local throttle = require('script_throttle')
 
 local lastDebugTime = os.clock()
 
+-- check for limiter being lower than threshold for LO206, etc
+local useLimiter = ac.INIConfig.carData(car.index, "engine.ini"):get("ENGINE_DATA", "LIMITER", 20000) < 10000 and true or false
 
 -- Shows specific variables in debug
 local function showDebugValues()
     if os.clock() - lastDebugTime > 0.05 then
         lastDebugTime = os.clock()
+        ac.debug("useLimiter", useLimiter)
+        ac.debug("LIMITER", ac.INIConfig.carData(car.index, "engine.ini"):get("ENGINE_DATA", "LIMITER", 20000))
         ac.debug("state.engine.torque", state.engine.torque)
         ac.debug("state.engine.compressionTorque", state.engine.compressionTorque)
         ac.debug("state.engine.compressionWave", state.engine.compressionWave)
@@ -77,9 +77,6 @@ end
 
 ac.onCarJumped(0, script.reset)
 
--- check for limiter being lower than threshold for LO206, etc
-local useLimiter = ac.INIConfig.load("engine.ini"):get("ENGINE_DATA", "LIMITER", 20000) < 10000 and true or false
-
 -- Run by game every physics tick (~333 Hz)
 ---@diagnostic disable-next-line: duplicate-set-field
 function script.update(dt)
@@ -90,18 +87,8 @@ function script.update(dt)
 
     brakeAutoHold()
 
-    --combustion.update(dt)
-    --starter.update(dt)
-    --drivetrain.update(dt)
-    --clutch.update(dt)
     ffb.update(dt)
-
     throttle.update(dt)
-
-    --ac.overrideGasInput(1) -- physics gas input is required to be 1 at all times to correctly "override" stock engine model
-    --ac.disableEngineLimiter(true)
-    --ac.overrideEngineTorque(state.engine.torque + (state.starter.engaged and state.starter.torque or 0))
-
     sharedData.update()
 
     showDebugValues()
