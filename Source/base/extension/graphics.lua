@@ -2,9 +2,6 @@
 -- Authored by ohyeah2389
 
 local helpers = require("helpers")
-local NodeAnimator = require("node_animator")
-local Physics = require("physics_classes")
-
 
 --local sharedData = ac.connect({
 --    ac.StructItem.key('modkart_c2_shared_' .. car.index),
@@ -34,11 +31,6 @@ end
 
 
 function FrameRateChecker:update(dt)
-    if (dt == 0) or (math.abs(sim.timeToSessionStart) < 3000) then
-        self.isActive = false
-        return
-    end
-
     self.sampleSum = self.sampleSum + dt
     self.sampleCount = self.sampleCount + 1
 
@@ -106,9 +98,10 @@ local partConfigurations = {
     }
 }
 
+local baseSetupKey = 'modkart_c2_shared_' .. car.index
+
 
 local function updatePartVisibility(partConfig)
-    local baseSetupKey = 'modkart_c2_shared_' .. car.index
     local setupItem = ac.load(baseSetupKey .. partConfig.setupKeySuffix) or 0 -- Default to 0
 
     -- Iterate through all defined options for this part type
@@ -134,6 +127,12 @@ local driverAnimator = DriverAnimator()
 local kartAnimator = KartAnimator()
 
 local antiResetAdder = 0
+
+local carNode = ac.findNodes("BODYTR")
+local tierodLTarget = ac.findNodes("DIR2_anim_tierodLF")
+local tierodRTarget = ac.findNodes("DIR2_anim_tierodRF")
+local tierodLControl = ac.findNodes("DIR_anim_tierodLF")
+local tierodRControl = ac.findNodes("DIR_anim_tierodRF")
 
 
 ---@diagnostic disable-next-line: duplicate-set-field
@@ -170,17 +169,13 @@ function script.update(dt)
         kartAnimator:update(dt, angularAcceleration)
     end
 
-    local carNode = ac.findNodes("BODYTR")
-    local tierodLTarget = ac.findNodes("DIR2_anim_tierodLF")
-    local tierodRTarget = ac.findNodes("DIR2_anim_tierodRF")
-    local tierodLControl = ac.findNodes("DIR_anim_tierodLF")
-    local tierodRControl = ac.findNodes("DIR_anim_tierodRF")
-
     tierodLControl:setPosition(helpers.getPositionInCarFrame(tierodLTarget, carNode))
     tierodRControl:setPosition(helpers.getPositionInCarFrame(tierodRTarget, carNode))
 
     -- Update visibility for all configured parts
-    for _, partConfig in pairs(partConfigurations) do
-        updatePartVisibility(partConfig)
+    if sim.isInMainMenu then
+        for _, partConfig in pairs(partConfigurations) do
+            updatePartVisibility(partConfig)
+        end
     end
 end
