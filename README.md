@@ -30,7 +30,7 @@ If you have any questions, comments, suggestions, or notes that you'd like to sh
 
 This is my attempt to bring the world of professional/outdoor/owner kart racing to Assetto Corsa at a higher fidelity than has been accomplished before. Assetto Corsa is famously a car racing/driving sim, but with the physics extensions provided by the popular Custom Shaders Patch physics and graphics extension, I do now believe that karts are possible to simulate with it.
 
-I've been working since early 2025 on this completely scratch-built implementation of a 1050mm-wheelbase sprint kart as is popular in the US, Australia, and Europe for all levels of competition from club events to world championships. This kart will eventually be outfitted with a few different engine types, such as the four-stroke LO206 which is popular in the US, and the IAME X30 water-cooled two-stroke, but I'll be focusing on the IAME KA100 air-cooled two-stroke engine, which is popular worldwide on all levels of competition. I have included three other engine physics models for testing purposes, but they don't have their own 3D models yet, and won't until the KA100 model is finished.
+I've been working since September of 2024 on this completely scratch-built implementation of a 1050mm-wheelbase sprint kart as is popular in the US, Australia, and Europe for all levels of competition from club events to world championships. This kart will eventually be outfitted with a few different engine types, such as the four-stroke LO206 which is popular in the US, and the IAME X30 water-cooled two-stroke, but I'll be focusing on the IAME KA100 air-cooled two-stroke engine, which is popular worldwide on all levels of competition. I have included three other engine physics models for testing purposes, but they don't have their own 3D models yet, and won't until the KA100 model is finished.
 
 Please read the LICENSE file for information on the license this code is provided to you under. Attribution must be given to the original creator (ohyeah2389) wherever it is posted or used. No commercial use is allowed (for example, no putting this kart model or any derivatives of it or its components on a pay-for-use simulator, and no using it or any derivatives of it or its components as part of a training program for a for-profit race team). While this repository is provided under the license listed, take note that the art assets are not present in this repository and are not licensed under the same terms. Conversion, ripping, or use of the art assets in any way other than intended (including conversion for other games or non-game uses) goes against the terms of the license of the compiled releases and is not legal without prior, explicit, written permission.
 
@@ -59,7 +59,7 @@ There are four vehicle classes currently included in the release version:
 	- Dry Weight: 365 lbs (166 kg)
 	- Peak Torque: 13.56 Nm @ 3000 RPM
 
-- KA100 (SKUSA KA100 Senior)
+- KA100 (SKUSA KA100 Senior spec)
 	- Dry Weight: 355 lbs (161 kg)
 	- Peak Torque: 12.78 Nm @ 10000 RPM
 
@@ -67,7 +67,7 @@ There are four vehicle classes currently included in the release version:
 	- Dry Weight: 375 lbs (170 kg)
 	- Peak Torque: 21.88 Nm @ 10500 RPM
 
-- ROK Shifter (SKUSA Pro Shifter)
+- ROK Shifter (SKUSA Pro Shifter spec)
 	- Dry Weight: 390 lbs (177 kg)
 	- Peak Torque: 22.75 Nm @ 12400 RPM
 
