@@ -62,9 +62,11 @@ local partConfigurations = {
             [2] = {"OTK M6 Nassau"},
             [3] = {"KG508_Nassau"},
             [4] = {"Eurostar Dynamica Nassau"},
-            [5] = {"MetalFairingNassau"},
-            [6] = {"KG Buru Nassau"},
-            [7] = {"OvalNassau"},
+            [5] = {"KG Buru Nassau"},
+            [6] = {"KG 509 Nassau"},
+            [7] = {"KR DynEvo Nassau"},
+            [8] = {"OvalNassau"},
+            [9] = {"MetalFairingNassau"},
             [100] = {} -- hide all
         }
     },
@@ -76,7 +78,8 @@ local partConfigurations = {
             [2] = {"KG506 Nosecone"},
             [3] = {"KG Buru Nosecone"},
             [4] = {"KG FP7 Nosecone"},
-            [5] = {"OvalNosecone"},
+            [5] = {"KR DynEvo Nosecone"},
+            [6] = {"OvalNosecone"},
             [100] = {} -- hide all
         }
     },
@@ -94,8 +97,9 @@ local partConfigurations = {
         options = {
             [0] = {"OTK M10 Sidepod Left", "OTK M10 Sidepod Right"},
             [1] = {"OTK M6 Sidepod Left", "OTK M6 Sidepod Right"},
-            [2] = {"SidepodMetal_L", "SidepodMetal_R"},
+            [2] = {"KR DynEvo Sidepod Right", "KR DynEvo Sidepod Left"},
             [3] = {"OvalSidepodRight", "OvalSidepodLeft"},
+            [4] = {"SidepodMetal_L", "SidepodMetal_R"},
             [100] = {} -- hide all
         }
     }
