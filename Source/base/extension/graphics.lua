@@ -164,7 +164,7 @@ function script.update(dt)
     ac.debug("car.acceleration.y", car.acceleration.y)
     ac.debug("car.acceleration.z", car.acceleration.z)
 
-    if frameRateChecker.isActive then
+    if frameRateChecker.isActive and not ((sim.isPaused) or (sim.isReplayActive and (sim.replayPlaybackRate < 0.01))) then
         if car.extraC then
             driverAnimator:setState("handUp", true, true)
         else
