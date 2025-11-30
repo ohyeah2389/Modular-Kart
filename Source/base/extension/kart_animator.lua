@@ -1,5 +1,5 @@
 local helpers = require("helpers")
-local Physics = require("physics_classes")
+local Physics = require("physics_object")
 local NodeAnimator = require("node_animator")
 
 local KartAnimator = class("KartAnimator")
@@ -11,117 +11,120 @@ function KartAnimator:initialize()
             posMax = 1,
             posMin = -1,
             center = 0,
-            mass = 0.5,
-            frictionCoef = 0.3,
+            mass = 0.01,
+            frictionCoef = 0,
             staticFrictionCoef = 0,
+            dampingCoef = 0.3,
             springCoef = 0,
             forceMax = 30,
             constantForce = 0,
-            endstopRate = 50
         },
         sidepodRight = NodeAnimator{
             nodeName = "SidepodBouncerRight",
-            posMax = 0.008,
-            posMin = -0.008,
+            posMax = 0.02,
+            posMin = -0.02,
             center = 0,
-            mass = 1,
-            frictionCoef = 0.25,
+            mass = 0.1,
+            frictionCoef = 0,
             staticFrictionCoef = 0,
-            springCoef = 0,
+            dampingCoef = 0.05,
+            springCoef = 20,
             forceMax = 50,
-            constantForce = -0.2,
-            endstopRate = 30,
+            constantForce = -0.5,
             flipped = false,
-            vibration = 0.05
+            vibration = 0.0,
         },
         sidepodLeft = NodeAnimator{
             nodeName = "SidepodBouncerLeft",
-            posMax = 0.008,
-            posMin = -0.008,
+            posMax = 0.02,
+            posMin = -0.02,
             center = 0,
-            mass = 1,
-            frictionCoef = 0.25,
+            mass = 0.1,
+            frictionCoef = 0,
             staticFrictionCoef = 0,
-            springCoef = 0,
+            dampingCoef = 0.05,
+            springCoef = 20,
             forceMax = 50,
-            constantForce = -0.2,
-            endstopRate = 30,
+            constantForce = -0.5,
             flipped = true,
-            vibration = 0.04
+            vibration = 0.0,
         },
         bumperRear = NodeAnimator{
             nodeName = "RearBumperPlastic",
             posMax = 0.05,
             posMin = -0.05,
             center = 0,
-            mass = 1,
-            frictionCoef = 0.2,
+            mass = 0.1,
+            frictionCoef = 0,
             staticFrictionCoef = 0,
+            dampingCoef = 0.2,
             springCoef = 0,
             forceMax = 50,
             constantForce = -0.5,
             endstopRate = 50,
             flipped = false,
-            vibration = 0.05
+            vibration = 0.0,
         },
         bumperRearVertical = NodeAnimator{
             nodeName = "RearBumperBracket",
             posMax = 0.02,
             posMin = -0.01,
             center = 0,
-            mass = 0.5,
-            frictionCoef = 0.4,
+            mass = 0.1,
+            frictionCoef = 0,
             staticFrictionCoef = 0,
+            dampingCoef = 0.1,
             springCoef = 0,
             forceMax = 100,
-            constantForce = -0.1,
+            constantForce = -0.5,
             endstopRate = 100,
-            flipped = false
+            flipped = false,
         },
         bumperRearAxial = NodeAnimator{
             nodeName = "RearBumperBracketRotator",
-            posMax = 0.0,
-            posMin = -0.0,
+            posMax = 0.5,
+            posMin = -0.5,
             center = 0,
-            mass = 0.5,
-            frictionCoef = 0.6,
+            mass = 0.05,
+            frictionCoef = 0,
             staticFrictionCoef = 0,
-            springCoef = 0.2,
+            dampingCoef = 0.6,
+            springCoef = 50,
             forceMax = 100,
             constantForce = 0,
-            endstopRate = 50,
-            flipped = false
+            flipped = false,
         },
         nassau = NodeAnimator{
             nodeName = "Nassau Bouncer",
-            posMax = 0.0,
-            posMin = -0.0,
+            posMax = 0.1,
+            posMin = -0.1,
             center = 0,
-            mass = 1.5,
-            frictionCoef = 0.2,
+            mass = 0.02,
+            frictionCoef = 0,
             staticFrictionCoef = 0,
-            springCoef = 0.0,
+            dampingCoef = 0.25,
+            springCoef = 50,
             forceMax = 100,
-            constantForce = 0,
+            constantForce = 0.0,
             endstopRate = 70,
-            vibration = 0.05
+            vibration = 0.0,
         },
         nosecone = NodeAnimator{
             nodeName = "NoseconeBouncer",
-            posMax = 0.0,
-            posMin = -0.0,
+            posMax = 0.1,
+            posMin = -0.1,
             center = 0,
-            mass = 3,
-            frictionCoef = 0.3,
+            mass = 0.1,
+            frictionCoef = 0,
             staticFrictionCoef = 0,
-            springCoef = 0.0,
+            dampingCoef = 0.35,
+            springCoef = 100,
             forceMax = 100,
             constantForce = 0,
             endstopRate = 120,
-            vibration = 0.1
+            vibration = 0.0,
         }
     }
-
 
     -- Node configuration
     self.nodes = {
@@ -182,13 +185,13 @@ end
 
 
 function KartAnimator:update(dt, angularAcceleration)
-    local forceSidepodRight = (car.acceleration.y * 0.1 * self.physics.sidepodRight.physics.mass) + (angularAcceleration.z * 0.01 * self.physics.sidepodRight.physics.mass)
-    local forceSidepodLeft = (car.acceleration.y * 0.1 * self.physics.sidepodLeft.physics.mass) + (angularAcceleration.z * -0.01 * self.physics.sidepodLeft.physics.mass)
-    local forceBumperRear = (car.acceleration.y * 0.2 * self.physics.bumperRear.physics.mass)
-    local forceBumperRearAxial = (angularAcceleration.z * 0.03 * self.physics.bumperRearAxial.physics.mass)
-    local forceBumperRearVertical = (car.acceleration.y * 0.1 * self.physics.bumperRearVertical.physics.mass)
-    local forceNassau = (car.acceleration.x * 0.6)
-    local forceNosecone = (car.acceleration.y * -0.2)
+    local forceSidepodRight = -car.acceleration.y + (angularAcceleration.z * 0.1)
+    local forceSidepodLeft = -car.acceleration.y + (angularAcceleration.z * -0.1)
+    local forceBumperRear = car.acceleration.y
+    local forceBumperRearAxial = angularAcceleration.z
+    local forceBumperRearVertical = -car.acceleration.y
+    local forceNassau = -car.acceleration.x
+    local forceNosecone = car.acceleration.y
 
     self.physics.sidepodRight:update(forceSidepodRight, vec3(1, 0, 0), vec3(0, 0, 0), dt)
     self.physics.sidepodLeft:update(forceSidepodLeft, vec3(1, 0, 0), vec3(0, 0, 0), dt)
@@ -200,7 +203,8 @@ function KartAnimator:update(dt, angularAcceleration)
 
     self.physics.brakeDisc.posMax = helpers.mapRange(car.brake, 0, 0.2, 1, 0.1, true)
     self.physics.brakeDisc.posMin = helpers.mapRange(car.brake, 0, 0.2, -1, -0.1, true)
-    local brakeDiscAnimPos = self.physics.brakeDisc:step(car.acceleration.x * 100, dt)
+    self.physics.brakeDisc:step(car.acceleration.x * -100, dt)
+    local brakeDiscAnimPos = self.physics.brakeDisc.position
 
     self.nodes.brakeSystem.disc.node:setPosition(
         self.nodes.brakeSystem.disc.position +

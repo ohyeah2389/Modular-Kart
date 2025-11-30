@@ -1,4 +1,4 @@
-local Physics = require("physics_classes")
+local Physics = require("physics_object")
 local helpers = require("helpers")
 
 local NodeAnimator = class("NodeAnimator")
@@ -18,19 +18,17 @@ end
 
 
 function NodeAnimator:update(forceInput, bounceDir, translationDir, dt)
-    local force = forceInput * self.physics.mass
-
     local angular_velocity = (car.rpm / 60 / 2) * (2 * math.pi)
-    self.vibration_angle = self.vibration_angle + angular_velocity * dt
+    self.vibration_angle = self.vibration_angle + angular_velocity * math.min(dt, 1/40)
     self.vibration_angle = math.fmod(self.vibration_angle, 2 * math.pi)
 
     local vibration_force = self.vibration * math.sin(self.vibration_angle) * helpers.mapRange(car.rpm, 0, 200, 0, 1, true) * helpers.mapRange(car.rpm, 4000, 6000, 1, 0, true)
 
-    local animationPos = self.physics:step(force + vibration_force, dt)
+    self.physics:step(forceInput + vibration_force, dt)
+    local animationPos = self.physics.position * (self.flipped and -1 or 1)
 
-    local bounceValue = animationPos * (self.flipped and -1 or 1)
-    self.node:setOrientation(self.originalLook + bounceValue * bounceDir, self.originalUp)
-    self.node:setPosition(self.originalPosition + (translationDir * bounceValue))
+    self.node:setOrientation(self.originalLook + animationPos * bounceDir, self.originalUp)
+    self.node:setPosition(self.originalPosition + (translationDir * animationPos))
 end
 
 return NodeAnimator 

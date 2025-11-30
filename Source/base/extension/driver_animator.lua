@@ -1,5 +1,5 @@
 local helpers = require("helpers")
-local Physics = require("physics_classes")
+local Physics = require("physics_object")
 local ikSolver_fabrik = require("fabrik")
 local ikSolver_jacobian = require("jacobian")
 
@@ -8,136 +8,171 @@ local DriverAnimator = class("DriverAnimator")
 function DriverAnimator:initialize()
     -- Physics configuration
     self.physicsObjects = {
-        bodyLat = Physics {
+        bodyLat = Physics({
             posMax = 0.85,
             posMin = 0.15,
             center = 0.5,
-            mass = 2,
-            frictionCoef = 0.4,
+            mass = 0.04,
+            frictionCoef = 0,
+            staticFrictionCoef = 0,
+            dampingCoef = 0.4,
             springCoef = 10,
             forceMax = 30,
             constantForce = 0,
             endstopRate = 30
-        },
+        }),
 
-        bodyVert = Physics {
-            posMax = 0.9,
-            posMin = 0.1,
-            center = 0.5,
-            mass = 3,
-            frictionCoef = 0.3,
-            springCoef = 30,
+        bodyVert = Physics({
+            posMax = 2.0,
+            posMin = -0.1,
+            center = 0.0,
+            mass = 0.005,
+            frictionCoef = 0,
+            staticFrictionCoef = 0,
+            dampingCoef = 0.35,
+            springCoef = 2,
             forceMax = 30,
-            constantForce = 5,
+            constantForce = 0.1,
             endstopRate = 40
-        },
+        }),
 
-        bodyLong = Physics {
-            posMax = 0.9,
-            posMin = 0.1,
+        bodyLong = Physics({
+            posMax = 1.2,
+            posMin = 0.3,
             center = 0.5,
-            mass = 3,
-            frictionCoef = 0.6,
-            springCoef = 50,
+            mass = 0.03,
+            frictionCoef = 0,
+            staticFrictionCoef = 0,
+            dampingCoef = 0.7,
+            springCoef = 5,
             forceMax = 50,
             constantForce = 0,
             endstopRate = 40
-        },
+        }),
 
-        neckTurn = Physics {
-            posMax = 0.2,
+        bodySteerLeanLong = Physics({
+            posMax = 3.2,
             posMin = -0.2,
+            center = 0.1,
+            mass = 0.08,
+            frictionCoef = 0,
+            staticFrictionCoef = 0,
+            dampingCoef = 1.4,
+            springCoef = 15,
+            forceMax = 80,
+            constantForce = 0,
+        }),
+
+        neckTurn = Physics({
+            posMax = 0.5,
+            posMin = -0.5,
             center = 0,
-            mass = 1,
-            frictionCoef = 0.6,
-            springCoef = 5,
+            mass = 0.05,
+            frictionCoef = 0,
+            staticFrictionCoef = 0,
+            dampingCoef = 0.7,
+            springCoef = 4,
             forceMax = 30,
             constantForce = 0,
             endstopRate = 10
-        },
+        }),
 
-        neckTiltLat = Physics {
+        neckTiltLat = Physics({
             posMax = 0.8,
             posMin = -0.8,
             center = 0,
-            mass = 2,
-            frictionCoef = 0.4,
-            springCoef = 10,
-            forceMax = 30,
+            mass = 0.03,
+            frictionCoef = 0,
+            staticFrictionCoef = 0,
+            dampingCoef = 0.7,
+            springCoef = 20,
+            forceMax = 20,
             constantForce = 0,
             endstopRate = 60
-        },
+        }),
 
-        neckTiltLong = Physics {
-            posMax = 1,
-            posMin = -1,
-            center = 0,
-            mass = 1.5,
-            frictionCoef = 0.6,
-            springCoef = 30,
-            forceMax = 100,
-            constantForce = 0,
+        neckTiltLong = Physics({
+            posMax = 0.2,
+            posMin = -0.2,
+            center = -0.15,
+            mass = 0.04,
+            frictionCoef = 0,
+            staticFrictionCoef = 0,
+            dampingCoef = 0.7,
+            springCoef = 20,
+            forceMax = 20,
+            constantForce = 2.8,
             endstopRate = 50
-        },
+        }),
 
-        legL = Physics {
+        legL = Physics({
             posMax = 0.8,
             posMin = 0.2,
             center = 0.5,
-            mass = 2,
-            frictionCoef = 0.4,
+            mass = 0.05,
+            frictionCoef = 0,
+            staticFrictionCoef = 0,
+            dampingCoef = 0.4,
+            springCoef = 5,
+            forceMax = 20,
+            constantForce = 0,
+            endstopRate = 50
+        }),
+
+        legR = Physics({
+            posMax = 0.8,
+            posMin = 0.2,
+            center = 0.5,
+            mass = 0.05,
+            frictionCoef = 0,
+            staticFrictionCoef = 0,
+            dampingCoef = 0.4,
             springCoef = 15,
             forceMax = 20,
             constantForce = 0,
             endstopRate = 50
-        },
-
-        legR = Physics {
-            posMax = 0.8,
-            posMin = 0.2,
-            center = 0.5,
-            mass = 3,
-            frictionCoef = 0.3,
-            springCoef = 30,
-            forceMax = 20,
-            constantForce = 0,
-            endstopRate = 50
-        },
+        }),
 
         handPhysics = {
-            x = Physics {
+            x = Physics({
                 posMax = 1,
                 posMin = -1,
                 center = 0,
-                mass = 4,
-                frictionCoef = 0.3,
-                springCoef = 20,
+                mass = 0.04,
+                frictionCoef = 0,
+                staticFrictionCoef = 0,
+                dampingCoef = 0.3,
+                springCoef = 3,
                 forceMax = 15,
                 constantForce = 0,
                 endstopRate = 25
-            },
-            y = Physics {
+            }),
+            y = Physics({
                 posMax = 1,
                 posMin = -1,
                 center = 0,
-                mass = 2,
-                frictionCoef = 0.3,
-                springCoef = 10,
+                mass = 0.02,
+                frictionCoef = 0,
+                staticFrictionCoef = 0,
+                dampingCoef = 0.45,
+                springCoef = 2,
                 forceMax = 15,
                 constantForce = 0,
                 endstopRate = 25
-            },
-            z = Physics {
+            }),
+            z = Physics({
                 posMax = 1,
                 posMin = -1,
                 center = 0,
-                mass = 3,
-                frictionCoef = 0.4,
-                springCoef = 30,
+                mass = 0.03,
+                frictionCoef = 0,
+                staticFrictionCoef = 0,
+                dampingCoef = 0.45,
+                springCoef = 4,
                 forceMax = 15,
                 constantForce = 0,
                 endstopRate = 25
-            }
+            }),
         },
     }
 
@@ -568,21 +603,24 @@ function DriverAnimator:update(dt, antiResetAdder)
     local breathSineHarmonic = math.sin(sim.time * 0.005)
     local breathSineHarmonic2 = math.sin(sim.time * 0.007)
 
-    local legLForce = (car.acceleration.x * self.physicsObjects.legL.mass + (breathSineHarmonic * 0.04) + (breathSine * 0.1))
-    local legRForce = (car.acceleration.x * self.physicsObjects.legR.mass + (breathSineHarmonic2 * 0.04) + (breathSine * 0.1))
-    local bodyLatForce = (car.acceleration.x * self.physicsObjects.bodyLat.mass + (breathSineHarmonic * 0.02))
-    local bodyVertForce = (-car.acceleration.y * self.physicsObjects.bodyVert.mass + (breathSine * 0.2))
-    local bodyLongForce = (car.acceleration.z * self.physicsObjects.bodyLong.mass + (breathSineHarmonic * 0.02))
+    local legLForce = (car.acceleration.x + (breathSineHarmonic * 0.05) + (breathSine * 0.15))
+    local legRForce = (car.acceleration.x + (breathSineHarmonic2 * 0.05) + (breathSine * 0.15))
+    local bodyLatForce = (car.acceleration.x + (breathSineHarmonic * 0.005))
+    local bodyVertForce = (car.acceleration.y + (breathSine * 0.1))
+    local bodyLongForce = (car.acceleration.z + (breathSineHarmonic * 0.005))
 
-    local legLAnimPos = self.physicsObjects.legL:step(legLForce, dt)
-    local legRAnimPos = self.physicsObjects.legR:step(legRForce, dt)
+    self.physicsObjects.legL:step(-legLForce, dt)
+    self.physicsObjects.legR:step(-legRForce, dt)
 
-    local neckTurnAnimPos = self.physicsObjects.neckTurn:step(car.steer * 0.1, dt)
-    local neckTiltLatAnimPos = self.physicsObjects.neckTiltLat:step((car.acceleration.x * 0.65) + (car.steer * 0.035 * helpers.mapRange(math.abs(car.speedKmh), 0, 80, 0.1, 1, true)),dt)
-    local neckTiltLongAnimPos = self.physicsObjects.neckTiltLong:step((car.acceleration.z * 1) + (car.acceleration.y * -1), dt)
+    self.physicsObjects.neckTurn:step(car.steer * -0.04, dt)
+    self.physicsObjects.neckTiltLat:step((car.acceleration.x * -0.65) + (car.steer * 0.035 * helpers.mapRange(math.abs(car.speedKmh), 0, 80, 0.1, 1, true)), dt)
+    self.physicsObjects.neckTiltLong:step((car.acceleration.z * -2) + (car.acceleration.y * 0.6) + (self.states.leanForward.progress * -3), dt)
 
-    local legLPos = legLAnimPos
-    local legRPos = legRAnimPos
+    local legLPos = self.physicsObjects.legL.position
+    local legRPos = self.physicsObjects.legR.position
+    local neckTurnAnimPos = self.physicsObjects.neckTurn.position
+    local neckTiltLatAnimPos = self.physicsObjects.neckTiltLat.position
+    local neckTiltLongAnimPos = self.physicsObjects.neckTiltLong.position
 
     ac.debug("bodyLat position", self.physicsObjects.bodyLat.position)
     ac.debug("bodyLat force", self.physicsObjects.bodyLat.force)
@@ -612,13 +650,20 @@ function DriverAnimator:update(dt, antiResetAdder)
     --    math.clamp(self.physicsObjects.bodyVert:step(bodyVertForce, dt), 0.02, 0.98) + (breathSine * 0.01) +
     --    ((antiResetAdder - 0.5) * 0.005))
 
-    local bodyLatPos = self.physicsObjects.bodyLat:step(bodyLatForce, dt) - 0.5
-    local bodyVertPos = self.physicsObjects.bodyVert:step(bodyVertForce, dt) - 0.5
-    local bodyLongPos = self.physicsObjects.bodyLong:step(bodyLongForce, dt) - 0.5
-    driverCenter:setPosition(vec3(0.045 + bodyLatPos * 0.02, 0.09 + bodyVertPos * 0.03, -0.16 + bodyLongPos * 0.02))
+    self.physicsObjects.bodyLat:step(-bodyLatForce, dt)
+    self.physicsObjects.bodyVert:step(-bodyVertForce, dt)
+    self.physicsObjects.bodyLong:step(-bodyLongForce, dt)
+    local bodyLatPos = self.physicsObjects.bodyLat.position - 0.5
+    local bodyVertPos = self.physicsObjects.bodyVert.position - 0.5
+    local bodyLongPos = self.physicsObjects.bodyLong.position - 0.5
+    driverCenter:setPosition(vec3(0.045 + bodyLatPos * 0.05, 0.09 + bodyVertPos * 0.03, -0.16 + bodyLongPos * 0.02))
+
+    self.physicsObjects.bodySteerLeanLong.center = math.clamp(math.remap(self.states.leanForward.progress, 0, 1, 0.1, 2.5) + ((math.sin(math.rad(math.abs(car.steer)))^3) * 0.55), 0, 3)
+
+    self.physicsObjects.bodySteerLeanLong:step(0, dt)
 
     local hipsOrientX = 0.15 * (-car.steer/90) + bodyLatPos * -0.05
-    local hipsOrientY = (self.states.leanForward.progress * -1.6) - ((math.sin(math.rad(math.abs(car.steer)))^3) * 0.55) - 0.3 - bodyLongPos
+    local hipsOrientY = (-self.physicsObjects.bodySteerLeanLong.position) - 0.2 - bodyLongPos
     local hipsOrientZ = 1
     local hipsUpX = 0.05 * (-car.steer/90)
     local hipsUpY = 0
@@ -643,7 +688,7 @@ function DriverAnimator:update(dt, antiResetAdder)
     )
 
     self.nodes.head.node:setOrientation(
-        self.nodes.head.forward + vec3(neckTurnAnimPos, neckTiltLongAnimPos * -2 + (self.states.leanForward.progress * 0.3), 0),
+        self.nodes.head.forward + vec3(neckTurnAnimPos, neckTiltLongAnimPos * -2, 0),
         self.nodes.head.up + vec3(neckTiltLatAnimPos, 0, neckTiltLongAnimPos * -2)
     )
 
@@ -714,17 +759,20 @@ function DriverAnimator:update(dt, antiResetAdder)
 
     -- Animation handUp
     if (self.states.handUp.active or self.states.handUp.rewinding) and self.states.handUp.progress > 0 then
-        local forceX = car.acceleration.x * self.physicsObjects.handPhysics.x.mass
-        local forceY = car.acceleration.y * self.physicsObjects.handPhysics.y.mass
-        local forceZ = car.acceleration.z * self.physicsObjects.handPhysics.z.mass
+        local forceX = car.acceleration.x
+        local forceY = car.acceleration.y
+        local forceZ = car.acceleration.z
 
         local randomX = math.perlin(sim.time * 0.0007, 3)
         local randomY = math.perlin(sim.time * 0.0005, 4)
         local randomZ = math.perlin(sim.time * 0.0004, 4)
 
-        local displacementX = self.physicsObjects.handPhysics.x:step(forceX + randomX, dt)
-        local displacementY = self.physicsObjects.handPhysics.y:step(forceY + randomY, dt)
-        local displacementZ = self.physicsObjects.handPhysics.z:step(forceZ + randomZ, dt)
+        self.physicsObjects.handPhysics.x:step(-forceX + randomX, dt)
+        self.physicsObjects.handPhysics.y:step(-forceY + randomY, dt)
+        self.physicsObjects.handPhysics.z:step(-forceZ + randomZ, dt)
+        local displacementX = self.physicsObjects.handPhysics.x.position
+        local displacementY = self.physicsObjects.handPhysics.y.position
+        local displacementZ = self.physicsObjects.handPhysics.z.position
 
         ac.debug("displacementX", displacementX)
         ac.debug("displacementY", displacementY)
