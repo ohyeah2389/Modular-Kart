@@ -190,4 +190,7 @@ function script.update(dt)
             updatePartVisibility(partConfig)
         end
     end
+    ac.debug("sim.replayPlaybackRate", sim.replayPlaybackRate)
+
+    lastDT = dt
 end
