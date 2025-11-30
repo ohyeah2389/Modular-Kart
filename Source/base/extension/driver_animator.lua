@@ -178,104 +178,100 @@ function DriverAnimator:initialize()
 
     -- Node configuration
     self.nodes = {
-        model = { node = "DRIVER:DRIVER" },
-        neck = { node = "DRIVER:RIG_Nek" },
-        head = { node = "DRIVER:RIG_Head" },
+        model = { node = ac.findNodes("DRIVER:DRIVER") },
+        neck = { node = ac.findNodes("DRIVER:RIG_Nek") },
+        head = { node = ac.findNodes("DRIVER:RIG_Head") },
         arm = {
             L = {
-                clavicle = { node = "DRIVER:RIG_Clave_L" },
-                upper = { node = "DRIVER:RIG_Arm_L" },
-                forearm = { node = "DRIVER:RIG_ForeArm_L", scale = 1.05 },
-                forearmEnd = { node = "DRIVER:RIG_ForeArm_END_L" },
-                hand = { node = "DRIVER:RIG_HAND_L" }
+                clavicle = { node = ac.findNodes("DRIVER:RIG_Clave_L") },
+                upper = { node = ac.findNodes("DRIVER:RIG_Arm_L") },
+                forearm = { node = ac.findNodes("DRIVER:RIG_ForeArm_L"), scale = 1.05 },
+                forearmEnd = { node = ac.findNodes("DRIVER:RIG_ForeArm_END_L") },
+                hand = { node = ac.findNodes("DRIVER:RIG_HAND_L") }
             },
             R = {
-                clavicle = { node = "DRIVER:RIG_Clave_R" },
-                upper = { node = "DRIVER:RIG_Arm_R" },
-                forearm = { node = "DRIVER:RIG_ForeArm_R", scale = 1.05 },
-                forearmEnd = { node = "DRIVER:RIG_ForeArm_END_R" },
-                hand = { node = "DRIVER:RIG_HAND_R" }
+                clavicle = { node = ac.findNodes("DRIVER:RIG_Clave_R") },
+                upper = { node = ac.findNodes("DRIVER:RIG_Arm_R") },
+                forearm = { node = ac.findNodes("DRIVER:RIG_ForeArm_R"), scale = 1.05 },
+                forearmEnd = { node = ac.findNodes("DRIVER:RIG_ForeArm_END_R") },
+                hand = { node = ac.findNodes("DRIVER:RIG_HAND_R") }
             }
         },
         foot = {
-            L = { node = "DRIVER:RIG_Hill_L" },
-            R = { node = "DRIVER:RIG_Hill_R" }
+            L = { node = ac.findNodes("DRIVER:RIG_Hill_L") },
+            R = { node = ac.findNodes("DRIVER:RIG_Hill_R") }
         },
         shin = {
-            L = { node = "DRIVER:RIG_Shin_L" },
-            R = { node = "DRIVER:RIG_Shin_R" }
+            L = { node = ac.findNodes("DRIVER:RIG_Shin_L") },
+            R = { node = ac.findNodes("DRIVER:RIG_Shin_R") }
         },
         leg = {
-            L = { node = "DRIVER:RIG_Leg_L" },
-            R = { node = "DRIVER:RIG_Leg_R" }
+            L = { node = ac.findNodes("DRIVER:RIG_Leg_L") },
+            R = { node = ac.findNodes("DRIVER:RIG_Leg_R") }
         },
         fingers = {
             L = {
                 thumb = {
-                    node1 = { node = "DRIVER:HAND_L_Thumb1", forward = nil, up = nil },
-                    node2 = { node = "DRIVER:HAND_L_Thumb2", forward = nil, up = nil },
-                    node3 = { node = "DRIVER:HAND_L_Thumb3", forward = nil, up = nil }
+                    node1 = { node = ac.findNodes("DRIVER:HAND_L_Thumb1"), forward = nil, up = nil },
+                    node2 = { node = ac.findNodes("DRIVER:HAND_L_Thumb2"), forward = nil, up = nil },
+                    node3 = { node = ac.findNodes("DRIVER:HAND_L_Thumb3"), forward = nil, up = nil }
                 },
                 index = {
-                    node1 = { node = "DRIVER:HAND_Index1", forward = nil, up = nil },
-                    node2 = { node = "DRIVER:HAND_Index2", forward = nil, up = nil },
-                    node3 = { node = "DRIVER:HAND_Index3", forward = nil, up = nil }
+                    node1 = { node = ac.findNodes("DRIVER:HAND_Index1"), forward = nil, up = nil },
+                    node2 = { node = ac.findNodes("DRIVER:HAND_Index2"), forward = nil, up = nil },
+                    node3 = { node = ac.findNodes("DRIVER:HAND_Index3"), forward = nil, up = nil }
                 },
                 middle = {
-                    node1 = { node = "DRIVER:HAND_Middle1", forward = nil, up = nil },
-                    node2 = { node = "DRIVER:HAND_Middle2", forward = nil, up = nil },
-                    node3 = { node = "DRIVER:HAND_Middle3", forward = nil, up = nil }
+                    node1 = { node = ac.findNodes("DRIVER:HAND_Middle1"), forward = nil, up = nil },
+                    node2 = { node = ac.findNodes("DRIVER:HAND_Middle2"), forward = nil, up = nil },
+                    node3 = { node = ac.findNodes("DRIVER:HAND_Middle3"), forward = nil, up = nil }
                 },
                 ring = {
-                    node1 = { node = "DRIVER:HAND_Ring1", forward = nil, up = nil },
-                    node2 = { node = "DRIVER:HAND_Ring2", forward = nil, up = nil },
-                    node3 = { node = "DRIVER:HAND_Ring3", forward = nil, up = nil }
+                    node1 = { node = ac.findNodes("DRIVER:HAND_Ring1"), forward = nil, up = nil },
+                    node2 = { node = ac.findNodes("DRIVER:HAND_Ring2"), forward = nil, up = nil },
+                    node3 = { node = ac.findNodes("DRIVER:HAND_Ring3"), forward = nil, up = nil }
                 },
                 pinkie = {
-                    node1 = { node = "DRIVER:HAND_Pinkie1", forward = nil, up = nil },
-                    node2 = { node = "DRIVER:HAND_Pinkie2", forward = nil, up = nil },
-                    node3 = { node = "DRIVER:HAND_Pinkie3", forward = nil, up = nil }
+                    node1 = { node = ac.findNodes("DRIVER:HAND_Pinkie1"), forward = nil, up = nil },
+                    node2 = { node = ac.findNodes("DRIVER:HAND_Pinkie2"), forward = nil, up = nil },
+                    node3 = { node = ac.findNodes("DRIVER:HAND_Pinkie3"), forward = nil, up = nil }
                 }
             },
             R = {
                 thumb = {
-                    node1 = { node = "DRIVER:HAND_R_Thumb1", forward = nil, up = nil },
-                    node2 = { node = "DRIVER:HAND_R_Thumb2", forward = nil, up = nil },
-                    node3 = { node = "DRIVER:HAND_R_Thumb3", forward = nil, up = nil }
+                    node1 = { node = ac.findNodes("DRIVER:HAND_R_Thumb1"), forward = nil, up = nil },
+                    node2 = { node = ac.findNodes("DRIVER:HAND_R_Thumb2"), forward = nil, up = nil },
+                    node3 = { node = ac.findNodes("DRIVER:HAND_R_Thumb3"), forward = nil, up = nil }
                 },
                 index = {
-                    node1 = { node = "DRIVER:HAND_Index4", forward = nil, up = nil },
-                    node2 = { node = "DRIVER:HAND_Index5", forward = nil, up = nil },
-                    node3 = { node = "DRIVER:HAND_Index6", forward = nil, up = nil }
+                    node1 = { node = ac.findNodes("DRIVER:HAND_Index4"), forward = nil, up = nil },
+                    node2 = { node = ac.findNodes("DRIVER:HAND_Index5"), forward = nil, up = nil },
+                    node3 = { node = ac.findNodes("DRIVER:HAND_Index6"), forward = nil, up = nil }
                 },
                 middle = {
-                    node1 = { node = "DRIVER:HAND_Middle4", forward = nil, up = nil },
-                    node2 = { node = "DRIVER:HAND_Middle5", forward = nil, up = nil },
-                    node3 = { node = "DRIVER:HAND_Middle6", forward = nil, up = nil }
+                    node1 = { node = ac.findNodes("DRIVER:HAND_Middle4"), forward = nil, up = nil },
+                    node2 = { node = ac.findNodes("DRIVER:HAND_Middle5"), forward = nil, up = nil },
+                    node3 = { node = ac.findNodes("DRIVER:HAND_Middle6"), forward = nil, up = nil }
                 },
                 ring = {
-                    node1 = { node = "DRIVER:HAND_Ring4", forward = nil, up = nil },
-                    node2 = { node = "DRIVER:HAND_Ring5", forward = nil, up = nil },
-                    node3 = { node = "DRIVER:HAND_Ring6", forward = nil, up = nil }
+                    node1 = { node = ac.findNodes("DRIVER:HAND_Ring4"), forward = nil, up = nil },
+                    node2 = { node = ac.findNodes("DRIVER:HAND_Ring5"), forward = nil, up = nil },
+                    node3 = { node = ac.findNodes("DRIVER:HAND_Ring6"), forward = nil, up = nil }
                 },
                 pinkie = {
-                    node1 = { node = "DRIVER:HAND_Pinkie4", forward = nil, up = nil },
-                    node2 = { node = "DRIVER:HAND_Pinkie5", forward = nil, up = nil },
-                    node3 = { node = "DRIVER:HAND_Pinkie6", forward = nil, up = nil }
+                    node1 = { node = ac.findNodes("DRIVER:HAND_Pinkie4"), forward = nil, up = nil },
+                    node2 = { node = ac.findNodes("DRIVER:HAND_Pinkie5"), forward = nil, up = nil },
+                    node3 = { node = ac.findNodes("DRIVER:HAND_Pinkie6"), forward = nil, up = nil }
                 }
             }
         }
     }
-
-    -- Initialize model node
-    self.nodes.model.node = ac.findNodes(self.nodes.model.node)
 
     ac.updateDriverModel()
 
     -- Initialize arm nodes with base transformations
     for side, parts in pairs(self.nodes.arm) do
         for _, data in pairs(parts) do
-            data.node = ac.findNodes(data.node)
             data.node:storeCurrentTransformation()
             data.baseForward = data.node:getLook()
             data.baseUp = data.node:getUp()
@@ -287,7 +283,6 @@ function DriverAnimator:initialize()
     -- Initialize paired nodes
     for _, group in pairs({ self.nodes.foot, self.nodes.shin, self.nodes.leg }) do
         for side, data in pairs(group) do
-            data.node = ac.findNodes(data.node)
             data.node:storeCurrentTransformation()
             data.forward = data.node:getLook()
             data.up = data.node:getUp()
@@ -298,7 +293,6 @@ function DriverAnimator:initialize()
     for side, fingers in pairs(self.nodes.fingers) do
         for _, finger in pairs(fingers) do
             for _, nodeData in pairs(finger) do
-                nodeData.node = ac.findNodes(nodeData.node)
                 nodeData.node:storeCurrentTransformation()
                 nodeData.forward = nodeData.node:getLook()
                 nodeData.up = nodeData.node:getUp()
@@ -307,13 +301,11 @@ function DriverAnimator:initialize()
     end
 
     -- Initialize neck node
-    self.nodes.neck.node = ac.findNodes(self.nodes.neck.node)
     self.nodes.neck.node:storeCurrentTransformation()
     self.nodes.neck.forward = self.nodes.neck.node:getLook()
     self.nodes.neck.up = self.nodes.neck.node:getUp()
 
     -- Initialize head node
-    self.nodes.head.node = ac.findNodes(self.nodes.head.node)
     self.nodes.head.node:storeCurrentTransformation()
     self.nodes.head.forward = self.nodes.head.node:getLook()
     self.nodes.head.up = self.nodes.head.node:getUp()
