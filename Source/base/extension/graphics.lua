@@ -141,11 +141,16 @@ local tierodRTarget = ac.findNodes("DIR2_anim_tierodRF")
 local tierodLControl = ac.findNodes("DIR_anim_tierodLF")
 local tierodRControl = ac.findNodes("DIR_anim_tierodRF")
 
+local lastDT = 1
+
+local dtSmoothing = 0.9
 
 ---@diagnostic disable-next-line: duplicate-set-field
 function script.update(dt)
     ac.boostFrameRate()
     ac.updateDriverModel()
+
+    local smoothDT = (lastDT * dtSmoothing) + (dt * (1 - dtSmoothing))
 
     antiResetAdder = (antiResetAdder + 1) % 2
     ac.debug("antiResetAdder", antiResetAdder)
@@ -172,8 +177,8 @@ function script.update(dt)
             driverAnimator:setState("leanForward", false, true)
         end
 
-        driverAnimator:update(dt, antiResetAdder)
-        kartAnimator:update(dt, angularAcceleration)
+        driverAnimator:update(smoothDT, antiResetAdder)
+        kartAnimator:update(smoothDT, angularAcceleration)
     end
 
     tierodLControl:setPosition(helpers.getPositionInCarFrame(tierodLTarget, carNode))
