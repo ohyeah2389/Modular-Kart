@@ -323,7 +323,7 @@ function DriverAnimator:initialize()
         handUp = {
             active = false,
             progress = 0,
-            duration = 0.8,
+            duration = 0.6,
             timer = 0,
             held = false,
             rewinding = false,
@@ -332,7 +332,7 @@ function DriverAnimator:initialize()
         leanForward = {
             active = false,
             progress = 0,
-            duration = 0.8,
+            duration = 0.6,
             timer = 0,
             held = false,
             rewinding = false,
@@ -372,7 +372,7 @@ function DriverAnimator:updateStates(dt)
                 state.timer = math.max(0, state.timer - dt)
                 local linearProgress = state.timer / state.duration
                 -- Apply sigmoid curve
-                state.progress = 1 / (1 + math.exp(-12 * (linearProgress - 0.5)))
+                state.progress = 1 / (1 + math.exp(-6 * (linearProgress - 0.5)))
                 if state.timer <= 0 then
                     state.rewinding = false
                     state.active = false
@@ -382,7 +382,7 @@ function DriverAnimator:updateStates(dt)
                 state.timer = math.min(state.duration, state.timer + dt)
                 local linearProgress = state.timer / state.duration
                 -- Apply sigmoid curve
-                state.progress = 1 / (1 + math.exp(-12 * (linearProgress - 0.5)))
+                state.progress = 1 / (1 + math.exp(-6 * (linearProgress - 0.5)))
                 if state.timer >= state.duration and not state.held then
                     state.active = false
                 end
