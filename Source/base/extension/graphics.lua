@@ -2,6 +2,7 @@
 -- Authored by ohyeah2389
 
 local helpers = require("helpers")
+local Physics = require("physics_object")
 
 --local sharedData = ac.connect({
 --    ac.StructItem.key('modkart_c2_shared_' .. car.index),
@@ -57,16 +58,16 @@ local partConfigurations = {
     nassau = {
         setupKeySuffix = '.nassau',
         options = {
-            [0] = {"OTK M11 Nassau"},
-            [1] = {"OTK M7 Nassau"},
-            [2] = {"OTK M6 Nassau"},
-            [3] = {"KG508_Nassau"},
-            [4] = {"Eurostar Dynamica Nassau"},
-            [5] = {"KG Buru Nassau"},
-            [6] = {"KG 509 Nassau"},
+            [0] = {"OTK M11 Nassau Plastic"},
+            [1] = {"OTK M7 Nassau Plastic"},
+            [2] = {"OTK M6 Nassau Plastic"},
+            [3] = {"KG 508 Nassau Plastic"},
+            [4] = {"Eurostar Dynamica Nassau Plastic"},
+            [5] = {"KG Buru Nassau Plastic"},
+            [6] = {"KG 509 Nassau Plastic"},
             [7] = {"KR DynEvo Nassau"},
-            [8] = {"OvalNassau"},
-            [9] = {"MetalFairingNassau"},
+            [8] = {"Oval Nassau Polycarbonate"},
+            [9] = {"Metal Fairing Nassau Metal"},
             [100] = {} -- hide all
         }
     },
@@ -141,14 +142,120 @@ local tierodRTarget = ac.findNodes("DIR2_anim_tierodRF")
 local tierodLControl = ac.findNodes("DIR_anim_tierodLF")
 local tierodRControl = ac.findNodes("DIR_anim_tierodRF")
 
-local lastDT = 1
+local testLatFlexPhys = {
+    posMax = 0.05,
+    posMin = -0.05,
+    center = 0.0,
+    mass = 20.0,
+    frictionCoef = 0,
+    staticFrictionCoef = 0,
+    dampingCoef = 40000,
+    springCoef = 80000,
+    forceMax = 10000,
+    constantForce = 0
+}
 
+local testVertFlexPhys = {
+    posMax = 0.05,
+    posMin = -0.05,
+    center = 0.0,
+    mass = 40.0,
+    frictionCoef = 0,
+    staticFrictionCoef = 0,
+    dampingCoef = 40000,
+    springCoef = 80000,
+    forceMax = 10000,
+    constantForce = 0
+}
+
+local tires = {
+    {
+        name = "LF",
+        base = ac.findNodes("BASE_LF"),
+        baseLocalOffset = vec3(0.5, 0.087, 0.466),
+        flex = ac.findNodes("FLEX_LF"),
+        susp = ac.findNodes("SUSP_LF"),
+        latFlexPhys = Physics(testLatFlexPhys),
+        vertFlexPhys = Physics(testVertFlexPhys),
+        filteredLatFlexInput = 0,
+        filteredVertFlexInput = 0,
+        canvas = ui.ExtraCanvas(vec2(512, 256)),
+        surface = ac.findSkinnedMeshes("Tire_FrontLeft"),
+        angle = 0
+    },
+    {
+        name = "RF",
+        base = ac.findNodes("BASE_RF"),
+        baseLocalOffset = vec3(-0.5, 0.087, 0.466),
+        flex = ac.findNodes("FLEX_RF"),
+        susp = ac.findNodes("SUSP_RF"),
+        latFlexPhys = Physics(testLatFlexPhys),
+        vertFlexPhys = Physics(testVertFlexPhys),
+        filteredLatFlexInput = 0,
+        filteredVertFlexInput = 0,
+        canvas = ui.ExtraCanvas(vec2(512, 256)),
+        surface = ac.findSkinnedMeshes("Tire_FrontRight"),
+        angle = 1
+    },
+    {
+        name = "LR",
+        base = ac.findNodes("BASE_LR"),
+        baseLocalOffset = vec3(0.6085, 0.087, -0.584),
+        flex = ac.findNodes("FLEX_LR"),
+        susp = ac.findNodes("SUSP_LR"),
+        latFlexPhys = Physics(testLatFlexPhys),
+        vertFlexPhys = Physics(testVertFlexPhys),
+        filteredLatFlexInput = 0,
+        filteredVertFlexInput = 0,
+        canvas = ui.ExtraCanvas(vec2(512, 256)),
+        surface = ac.findSkinnedMeshes("Tire_RearLeft"),
+        angle = 2
+    },
+    {
+        name = "RR",
+        base = ac.findNodes("BASE_RR"),
+        baseLocalOffset = vec3(-0.6085, 0.087, -0.584),
+        flex = ac.findNodes("FLEX_RR"),
+        susp = ac.findNodes("SUSP_RR"),
+        latFlexPhys = Physics(testLatFlexPhys),
+        vertFlexPhys = Physics(testVertFlexPhys),
+        filteredLatFlexInput = 0,
+        filteredVertFlexInput = 0,
+        canvas = ui.ExtraCanvas(vec2(512, 256)),
+        surface = ac.findSkinnedMeshes("Tire_RearRight"),
+        angle = 3
+    }
+}
+
+for _, tire in ipairs(tires) do
+    tire.base:storeCurrentTransformation()
+    tire.flex:storeCurrentTransformation()
+    tire.surface:ensureUniqueMaterials()
+end
+
+local lastDT = 1
 local dtSmoothing = 0.9
+
+local function applyFlexFilter(prev, input, dt, tau)
+    -- Exponential smoothing filter (lowpass)
+    local alpha = dt / (tau + dt)
+    return prev + alpha * (input - prev)
+end
+
+local function drawTireSurface(tireSpeed, tireAngle)
+    local rotationScalar = (1 / (2 * math.pi)) * 512
+    ui.beginBlurring()
+    ui.drawImage("dirt.dds", vec2(0 + (tireAngle * rotationScalar), 0), vec2(512 + (tireAngle * rotationScalar), 256), ui.ImageFit.Stretch)
+    ui.drawImage("dirt.dds", vec2(-512 + (tireAngle * rotationScalar), 0), vec2(0 + (tireAngle * rotationScalar), 256), ui.ImageFit.Stretch)
+    ui.endBlurring(vec2((0.005 * (math.abs(tireSpeed) + 0.001)) ^ 2.5, 0.0))
+end
 
 ---@diagnostic disable-next-line: duplicate-set-field
 function script.update(dt)
     ac.boostFrameRate()
     ac.updateDriverModel()
+
+    dt = math.max(dt, 0.016)
 
     local smoothDT = (lastDT * dtSmoothing) + (dt * (1 - dtSmoothing))
 
@@ -190,7 +297,38 @@ function script.update(dt)
             updatePartVisibility(partConfig)
         end
     end
-    ac.debug("sim.replayPlaybackRate", sim.replayPlaybackRate)
+
+    for tireIndex, tire in ipairs(tires) do
+        local parentTransform = tire.base:getParent():getWorldTransformationRaw()
+        local localTransform = tire.susp:getWorldTransformationRaw():mul(parentTransform:inverse())
+
+        -- Apply local offset in the bone's local space
+        if tire.baseLocalOffset then
+            -- Transform the offset from bone's local space to parent space using the rotation part
+            local rotatedOffset = localTransform:transformVector(tire.baseLocalOffset)
+            -- Add the rotated offset to the position
+            localTransform.position = localTransform.position + rotatedOffset
+        end
+
+        tire.base:getTransformationRaw():set(localTransform)
+
+        tire.filteredLatFlexInput = applyFlexFilter(tire.filteredLatFlexInput, car.wheels[tireIndex - 1].fy, smoothDT, 0.05)
+        tire.filteredVertFlexInput = applyFlexFilter(tire.filteredVertFlexInput, car.wheels[tireIndex - 1].load, smoothDT, 0.05)
+
+        tire.latFlexPhys:step(tire.filteredLatFlexInput, smoothDT)
+        tire.vertFlexPhys:step(tire.filteredVertFlexInput, smoothDT)
+
+        tire.flex:setPosition(vec3(tire.latFlexPhys.position, 0.2 + tire.vertFlexPhys.position, 0))
+
+        -- Update tire canvas and rotation tracking
+        tire.angle = tire.angle + (car.wheels[tireIndex - 1].angularSpeed * dt)
+        tire.angle = tire.angle - math.floor(tire.angle / (2 * math.pi)) * (2 * math.pi)
+        tire.canvas:clear()
+        tire.canvas:update(function() drawTireSurface(car.wheels[tireIndex - 1].angularSpeed, tire.angle) end)
+        tire.surface:setMaterialTexture('txDiffuse', tire.canvas)
+
+        ac.debug("tire angle " .. tireIndex, tire.angle)
+    end
 
     lastDT = dt
 end
