@@ -106,29 +106,29 @@ function DriverAnimator:initialize()
         }),
 
         legL = Physics({
-            posMax = 0.8,
-            posMin = 0.2,
-            center = 0.5,
+            posMax = 0.6,
+            posMin = -0.15,
+            center = 0.0,
             mass = 0.05,
             frictionCoef = 0,
             staticFrictionCoef = 0,
-            dampingCoef = 0.4,
+            dampingCoef = 0.2,
             springCoef = 5,
-            forceMax = 20,
+            forceMax = 30,
             constantForce = 0,
             endstopRate = 50
         }),
 
         legR = Physics({
-            posMax = 0.8,
-            posMin = 0.2,
-            center = 0.5,
+            posMax = 0.15,
+            posMin = -0.6,
+            center = 0.0,
             mass = 0.05,
             frictionCoef = 0,
             staticFrictionCoef = 0,
-            dampingCoef = 0.4,
-            springCoef = 15,
-            forceMax = 20,
+            dampingCoef = 0.2,
+            springCoef = 10,
+            forceMax = 30,
             constantForce = 0,
             endstopRate = 50
         }),
@@ -665,12 +665,12 @@ function DriverAnimator:update(dt, antiResetAdder)
 
     -- Update feet
     self.nodes.foot.L.node:setOrientation(
-        self.nodes.foot.L.forward + vec3(0, 0, (car.brake * 0.15) - 0.03),
-        self.nodes.foot.L.up
+        self.nodes.foot.L.forward + vec3(0, 0, (car.brake * 0.15)),
+        self.nodes.foot.L.up + vec3(legLPos * 1, 0, 0)
     )
     self.nodes.foot.R.node:setOrientation(
-        self.nodes.foot.R.forward + vec3(0, 0, (car.gas * 0.32) + 0.05),
-        self.nodes.foot.R.up
+        self.nodes.foot.R.forward + vec3(0, 0, (car.gas * 0.3)),
+        self.nodes.foot.R.up + vec3(legRPos * 1, 0, 0)
     )
 
     -- Update neck
@@ -686,24 +686,21 @@ function DriverAnimator:update(dt, antiResetAdder)
 
     -- Update shins
     self.nodes.shin.L.node:setOrientation(
-        self.nodes.shin.L.forward +
-        vec3(0 + (legLPos * 0.2), 0, (car.brake * 0.05) - 0.1 + ((self.physicsObjects.bodyVert.position - 0.5) * -0.2)),
+        self.nodes.shin.L.forward + vec3(0 + (legLPos * 0.2), 0 - (legLPos * 0.2), (car.brake * 0.05) + ((self.physicsObjects.bodyVert.position) * -0.2)),
         self.nodes.shin.L.up
     )
     self.nodes.shin.R.node:setOrientation(
-        self.nodes.shin.R.forward +
-        vec3(0 + (legRPos * 0.2), 0 - (legRPos * 0.2),
-            (car.gas * 0.2) - 0.2 + ((self.physicsObjects.bodyVert.position - 0.5) * -0.2)),
+        self.nodes.shin.R.forward + vec3(0 + (legRPos * 0.2), 0 - (legRPos * 0.2), (car.gas * 0.125) + ((self.physicsObjects.bodyVert.position) * -0.2)),
         self.nodes.shin.R.up
     )
 
     -- Update legs
     self.nodes.leg.L.node:setOrientation(
-        self.nodes.leg.L.forward + vec3(0 + (legLPos * 0.15), 0, (car.brake * 0.025) - 0.1),
+        self.nodes.leg.L.forward + vec3(0 + (legLPos * 0.15), 0, (car.brake * 0.025)),
         self.nodes.leg.L.up + vec3(legLPos * -0.25, legLPos * -0.6, 0)
     )
     self.nodes.leg.R.node:setOrientation(
-        self.nodes.leg.R.forward + vec3(-0.03 + (legRPos * 0.15), 0, (car.gas * 0.08) - 0.15),
+        self.nodes.leg.R.forward + vec3(0 + (legRPos * 0.15), 0, (car.gas * 0.05)),
         self.nodes.leg.R.up + vec3(legRPos * -0.3, legRPos * 0.6, 0)
     )
 
