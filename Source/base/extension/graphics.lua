@@ -255,7 +255,7 @@ function script.update(dt)
     ac.boostFrameRate()
     ac.updateDriverModel()
 
-    dt = math.max(dt, 0.016)
+    dt = math.min(dt, 0.016)
 
     local smoothDT = (lastDT * dtSmoothing) + (dt * (1 - dtSmoothing))
 
