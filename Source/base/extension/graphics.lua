@@ -351,7 +351,7 @@ function script.update(dt)
         tire.base:getTransformationRaw():set(localTransform)
 
         local flexOffset = vec3(
-            cphys.scriptControllerInputs[0 + (tireIndex - 1)] * 0.4,
+            cphys.scriptControllerInputs[0 + (tireIndex - 1)] * 0.25,
             cphys.scriptControllerInputs[4 + (tireIndex - 1)],
             0
         )
