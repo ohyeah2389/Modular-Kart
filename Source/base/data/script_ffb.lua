@@ -4,8 +4,6 @@
 
 local game = require('script_acConnection')
 local config = require('script_config')
-local state = require('script_state')
-local helpers = require('script_helpers')
 
 
 local ffb = {}

@@ -42,7 +42,7 @@ end
 function helpers.getOrientationInCarFrame(node, carNode)
     local carTransform = carNode:getTransformationRaw()
     local nodeWorldTransform = node:getWorldTransformationRaw()
-    
+
     -- Extract rotation matrices
     local carRotation = mat3x3(
         vec3(carTransform.row1.x, carTransform.row1.y, carTransform.row1.z),
@@ -54,14 +54,14 @@ function helpers.getOrientationInCarFrame(node, carNode)
         vec3(nodeWorldTransform.row2.x, nodeWorldTransform.row2.y, nodeWorldTransform.row2.z),
         vec3(nodeWorldTransform.row3.x, nodeWorldTransform.row3.y, nodeWorldTransform.row3.z)
     )
-    
+
     -- Manually transpose carRotation
     local carRotationTransposed = mat3x3(
         vec3(carRotation.row1.x, carRotation.row2.x, carRotation.row3.x),
         vec3(carRotation.row1.y, carRotation.row2.y, carRotation.row3.y),
         vec3(carRotation.row1.z, carRotation.row2.z, carRotation.row3.z)
     )
-    
+
     -- Manually multiply matrices
     local relativeRotation = mat3x3(
         vec3(
@@ -80,11 +80,11 @@ function helpers.getOrientationInCarFrame(node, carNode)
             carRotationTransposed.row3.x * nodeRotation.row1.z + carRotationTransposed.row3.y * nodeRotation.row2.z + carRotationTransposed.row3.z * nodeRotation.row3.z
         )
     )
-    
+
     -- Extract the forward and up vectors from the relative rotation
     local forward = vec3(relativeRotation.row3.x, relativeRotation.row3.y, relativeRotation.row3.z):normalize()
     local up = vec3(relativeRotation.row2.x, relativeRotation.row2.y, relativeRotation.row2.z):normalize()
-    
+
     return forward, up
 end
 
