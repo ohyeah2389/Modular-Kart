@@ -2,7 +2,8 @@
 -- Authored by ohyeah2389
 
 local helpers = require("helpers")
-local Physics = require("physics_object")
+local physObj = require("physics_object")
+local cphys = ac.getCarPhysics(car.index) or {}
 
 --local sharedData = ac.connect({
 --    ac.StructItem.key('modkart_c2_shared_' .. car.index),
@@ -142,43 +143,16 @@ local tierodRTarget = ac.findNodes("DIR2_anim_tierodRF")
 local tierodLControl = ac.findNodes("DIR_anim_tierodLF")
 local tierodRControl = ac.findNodes("DIR_anim_tierodRF")
 
-local testLatFlexPhys = {
-    posMax = 0.05,
-    posMin = -0.05,
-    center = 0.0,
-    mass = 20.0,
-    frictionCoef = 0,
-    staticFrictionCoef = 0,
-    dampingCoef = 40000,
-    springCoef = 80000,
-    forceMax = 10000,
-    constantForce = 0
-}
-
-local testVertFlexPhys = {
-    posMax = 0.05,
-    posMin = -0.05,
-    center = 0.0,
-    mass = 40.0,
-    frictionCoef = 0,
-    staticFrictionCoef = 0,
-    dampingCoef = 40000,
-    springCoef = 80000,
-    forceMax = 10000,
-    constantForce = 0
-}
-
 local tires = {
     {
         name = "LF",
         base = ac.findNodes("BASE_LF"),
         baseLocalOffset = vec3(0.5, 0.087, 0.466),
         flex = ac.findNodes("FLEX_LF"),
+        flexPivotLocal = vec3(0.5, 0.1, 0),
+        flexAxisLocal = vec3(0, 0, 1),
+        flexAngle = 0,
         susp = ac.findNodes("SUSP_LF"),
-        latFlexPhys = Physics(testLatFlexPhys),
-        vertFlexPhys = Physics(testVertFlexPhys),
-        filteredLatFlexInput = 0,
-        filteredVertFlexInput = 0,
         canvas = ui.ExtraCanvas(vec2(512, 256)),
         surface = ac.findSkinnedMeshes("Tire_FrontLeft"),
         angle = 0
@@ -188,11 +162,10 @@ local tires = {
         base = ac.findNodes("BASE_RF"),
         baseLocalOffset = vec3(-0.5, 0.087, 0.466),
         flex = ac.findNodes("FLEX_RF"),
+        flexPivotLocal = vec3(-0.5, 0.1, 0),
+        flexAxisLocal = vec3(0, 0, 1),
+        flexAngle = 0,
         susp = ac.findNodes("SUSP_RF"),
-        latFlexPhys = Physics(testLatFlexPhys),
-        vertFlexPhys = Physics(testVertFlexPhys),
-        filteredLatFlexInput = 0,
-        filteredVertFlexInput = 0,
         canvas = ui.ExtraCanvas(vec2(512, 256)),
         surface = ac.findSkinnedMeshes("Tire_FrontRight"),
         angle = 1
@@ -202,11 +175,10 @@ local tires = {
         base = ac.findNodes("BASE_LR"),
         baseLocalOffset = vec3(0.6085, 0.087, -0.584),
         flex = ac.findNodes("FLEX_LR"),
+        flexPivotLocal = vec3(0.6085, 0.1, 0),
+        flexAxisLocal = vec3(0, 0, 1),
+        flexAngle = 0,
         susp = ac.findNodes("SUSP_LR"),
-        latFlexPhys = Physics(testLatFlexPhys),
-        vertFlexPhys = Physics(testVertFlexPhys),
-        filteredLatFlexInput = 0,
-        filteredVertFlexInput = 0,
         canvas = ui.ExtraCanvas(vec2(512, 256)),
         surface = ac.findSkinnedMeshes("Tire_RearLeft"),
         angle = 2
@@ -216,11 +188,10 @@ local tires = {
         base = ac.findNodes("BASE_RR"),
         baseLocalOffset = vec3(-0.6085, 0.087, -0.584),
         flex = ac.findNodes("FLEX_RR"),
+        flexPivotLocal = vec3(-0.6085, 0.1, 0),
+        flexAxisLocal = vec3(0, 0, 1),
+        flexAngle = 0,
         susp = ac.findNodes("SUSP_RR"),
-        latFlexPhys = Physics(testLatFlexPhys),
-        vertFlexPhys = Physics(testVertFlexPhys),
-        filteredLatFlexInput = 0,
-        filteredVertFlexInput = 0,
         canvas = ui.ExtraCanvas(vec2(512, 256)),
         surface = ac.findSkinnedMeshes("Tire_RearRight"),
         angle = 3
@@ -231,23 +202,31 @@ for _, tire in ipairs(tires) do
     tire.base:storeCurrentTransformation()
     tire.flex:storeCurrentTransformation()
     tire.surface:ensureUniqueMaterials()
+    tire.flexBaseTransform = tire.flex:getTransformationRaw():clone()
 end
 
 local lastDT = 1
 local dtSmoothing = 0.9
-
-local function applyFlexFilter(prev, input, dt, tau)
-    -- Exponential smoothing filter (lowpass)
-    local alpha = dt / (tau + dt)
-    return prev + alpha * (input - prev)
-end
 
 local function drawTireSurface(tireSpeed, tireAngle)
     local rotationScalar = (1 / (2 * math.pi)) * 512
     ui.beginBlurring()
     ui.drawImage("dirt.dds", vec2(0 + (tireAngle * rotationScalar), 0), vec2(512 + (tireAngle * rotationScalar), 256), ui.ImageFit.Stretch)
     ui.drawImage("dirt.dds", vec2(-512 + (tireAngle * rotationScalar), 0), vec2(0 + (tireAngle * rotationScalar), 256), ui.ImageFit.Stretch)
-    ui.endBlurring(vec2((0.005 * (math.abs(tireSpeed) + 0.001)) ^ 2.5, 0.0))
+    ui.drawRectFilled(vec2(-512 + (tireAngle * rotationScalar), 0), vec2(512 + (tireAngle * rotationScalar), 256), rgbm(0.2, 0.2, 0.2, 0.9))
+    ui.endBlurring(vec2((0.006 * (math.abs(tireSpeed) + 0.001)) ^ 2.0, 0))
+end
+
+local function rotateTransformAroundLocalPivot(localTransform, pivotLocal, axisLocal, angleRad)
+    if not pivotLocal or not axisLocal or angleRad == 0 then
+        return localTransform
+    end
+
+    local pivotMatrix = mat4x4.translation(pivotLocal)
+    local pivotInverseMatrix = mat4x4.translation(vec3(-pivotLocal.x, -pivotLocal.y, -pivotLocal.z))
+    local rotationMatrix = mat4x4.rotation(angleRad, axisLocal)
+
+    return pivotMatrix:mul(rotationMatrix):mul(pivotInverseMatrix):mul(localTransform)
 end
 
 ---@diagnostic disable-next-line: duplicate-set-field
@@ -297,7 +276,6 @@ function script.update(dt)
             updatePartVisibility(partConfig)
         end
     end
-
     for tireIndex, tire in ipairs(tires) do
         local parentTransform = tire.base:getParent():getWorldTransformationRaw()
         local localTransform = tire.susp:getWorldTransformationRaw():mul(parentTransform:inverse())
@@ -312,13 +290,24 @@ function script.update(dt)
 
         tire.base:getTransformationRaw():set(localTransform)
 
-        tire.filteredLatFlexInput = applyFlexFilter(tire.filteredLatFlexInput, car.wheels[tireIndex - 1].fy, smoothDT, 0.05)
-        tire.filteredVertFlexInput = applyFlexFilter(tire.filteredVertFlexInput, car.wheels[tireIndex - 1].load, smoothDT, 0.05)
+        local flexOffset = vec3(
+            cphys.scriptControllerInputs[0 + (tireIndex - 1)] * 0.4,
+            cphys.scriptControllerInputs[4 + (tireIndex - 1)],
+            0
+        )
+        local flexTransform = tire.flexBaseTransform:clone()
+        flexTransform.position = flexTransform.position + flexOffset
+        flexTransform = rotateTransformAroundLocalPivot(
+            flexTransform,
+            tire.flexPivotLocal,
+            tire.flexAxisLocal,
+            tire.flexAngle + (cphys.scriptControllerInputs[0 + (tireIndex - 1)] * 2)
+        )
+        tire.flex:getTransformationRaw():set(flexTransform)
 
-        tire.latFlexPhys:step(tire.filteredLatFlexInput, smoothDT)
-        tire.vertFlexPhys:step(tire.filteredVertFlexInput, smoothDT)
-
-        tire.flex:setPosition(vec3(tire.latFlexPhys.position, 0.2 + tire.vertFlexPhys.position, 0))
+        local flexParentWorld = tire.flex:getParent():getWorldTransformationRaw()
+        local flexPivotWorld = flexParentWorld:transformPoint(tire.flexPivotLocal)
+        render.debugCross(flexPivotWorld, 0.1, rgbm(0, 1, 0, 1))
 
         -- Update tire canvas and rotation tracking
         tire.angle = tire.angle + (car.wheels[tireIndex - 1].angularSpeed * dt)
