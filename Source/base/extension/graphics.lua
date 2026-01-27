@@ -67,8 +67,9 @@ local partConfigurations = {
             [5] = {"KG Buru Nassau Plastic"},
             [6] = {"KG 509 Nassau Plastic"},
             [7] = {"KR DynEvo Nassau"},
-            [8] = {"Oval Nassau Polycarbonate"},
-            [9] = {"Metal Fairing Nassau Metal"},
+            [8] = {"CIK02 Nassau Plastic"},
+            [9] = {"Oval Nassau Polycarbonate"},
+            [10] = {"Metal Fairing Nassau Metal"},
             [100] = {} -- hide all
         }
     },
@@ -81,7 +82,8 @@ local partConfigurations = {
             [3] = {"KG Buru Nosecone"},
             [4] = {"KG FP7 Nosecone"},
             [5] = {"KR DynEvo Nosecone"},
-            [6] = {"OvalNosecone"},
+            [6] = {"CIK02 Nosecone Plastic"},
+            [7] = {"OvalNosecone"},
             [100] = {} -- hide all
         }
     },
@@ -100,8 +102,9 @@ local partConfigurations = {
             [0] = {"OTK M10 Sidepod Left", "OTK M10 Sidepod Right"},
             [1] = {"OTK M6 Sidepod Left", "OTK M6 Sidepod Right"},
             [2] = {"KR DynEvo Sidepod Right", "KR DynEvo Sidepod Left"},
-            [3] = {"OvalSidepodRight", "OvalSidepodLeft"},
-            [4] = {"SidepodMetal_L", "SidepodMetal_R"},
+            [3] = {"OldArrow SidepodBraceBar Left", "OldArrow SidepodBraceBar Right"},
+            [4] = {"OvalSidepodRight", "OvalSidepodLeft"},
+            [5] = {"SidepodMetal_L", "SidepodMetal_R"},
             [100] = {} -- hide all
         }
     }
