@@ -666,7 +666,7 @@ function DriverAnimator:update(dt, antiResetAdder)
     -- Update feet
     self.nodes.foot.L.node:setOrientation(
         self.nodes.foot.L.forward + vec3(0, 0, (car.brake * 0.15)),
-        self.nodes.foot.L.up + vec3(legLPos * 1, 0, 0)
+        self.nodes.foot.L.up + vec3(legLPos * 1, legLPos * 0.5, legLPos * -2)
     )
     self.nodes.foot.R.node:setOrientation(
         self.nodes.foot.R.forward + vec3(0, 0, (car.gas * 0.3)),
