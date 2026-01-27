@@ -148,7 +148,8 @@ local tierodRControl = ac.findNodes("DIR_anim_tierodRF")
 
 local tires = {
     {
-        name = "LF",
+        name = "FrontLeft",
+        textureName = "FrontLeft",
         base = ac.findNodes("BASE_LF"),
         baseLocalOffset = vec3(0.5, 0.087, 0.466),
         flex = ac.findNodes("FLEX_LF"),
@@ -156,12 +157,15 @@ local tires = {
         flexAxisLocal = vec3(0, 0, 1),
         flexAngle = 0,
         susp = ac.findNodes("SUSP_LF"),
-        canvas = ui.ExtraCanvas(vec2(512, 256)),
+        canvas = ui.ExtraCanvas(vec2(1024, 512)),
+        canvasNormal = ui.ExtraCanvas(vec2(1024, 512)),
+        canvasMaps = ui.ExtraCanvas(vec2(1024, 512)),
         surface = ac.findSkinnedMeshes("Tire_FrontLeft"),
         angle = 0
     },
     {
-        name = "RF",
+        name = "FrontRight",
+        textureName = "FrontLeft",
         base = ac.findNodes("BASE_RF"),
         baseLocalOffset = vec3(-0.5, 0.087, 0.466),
         flex = ac.findNodes("FLEX_RF"),
@@ -169,12 +173,15 @@ local tires = {
         flexAxisLocal = vec3(0, 0, 1),
         flexAngle = 0,
         susp = ac.findNodes("SUSP_RF"),
-        canvas = ui.ExtraCanvas(vec2(512, 256)),
+        canvas = ui.ExtraCanvas(vec2(1024, 512)),
+        canvasNormal = ui.ExtraCanvas(vec2(1024, 512)),
+        canvasMaps = ui.ExtraCanvas(vec2(1024, 512)),
         surface = ac.findSkinnedMeshes("Tire_FrontRight"),
         angle = 1
     },
     {
-        name = "LR",
+        name = "RearLeft",
+        textureName = "RearLeft",
         base = ac.findNodes("BASE_LR"),
         baseLocalOffset = vec3(0.6085, 0.087, -0.584),
         flex = ac.findNodes("FLEX_LR"),
@@ -182,12 +189,15 @@ local tires = {
         flexAxisLocal = vec3(0, 0, 1),
         flexAngle = 0,
         susp = ac.findNodes("SUSP_LR"),
-        canvas = ui.ExtraCanvas(vec2(512, 256)),
+        canvas = ui.ExtraCanvas(vec2(1024, 512)),
+        canvasNormal = ui.ExtraCanvas(vec2(1024, 512)),
+        canvasMaps = ui.ExtraCanvas(vec2(1024, 512)),
         surface = ac.findSkinnedMeshes("Tire_RearLeft"),
         angle = 2
     },
     {
-        name = "RR",
+        name = "RearRight",
+        textureName = "RearLeft",
         base = ac.findNodes("BASE_RR"),
         baseLocalOffset = vec3(-0.6085, 0.087, -0.584),
         flex = ac.findNodes("FLEX_RR"),
@@ -195,7 +205,9 @@ local tires = {
         flexAxisLocal = vec3(0, 0, 1),
         flexAngle = 0,
         susp = ac.findNodes("SUSP_RR"),
-        canvas = ui.ExtraCanvas(vec2(512, 256)),
+        canvas = ui.ExtraCanvas(vec2(1024, 512)),
+        canvasNormal = ui.ExtraCanvas(vec2(1024, 512)),
+        canvasMaps = ui.ExtraCanvas(vec2(1024, 512)),
         surface = ac.findSkinnedMeshes("Tire_RearRight"),
         angle = 3
     }
@@ -211,13 +223,58 @@ end
 local lastDT = 1
 local dtSmoothing = 0.9
 
-local function drawTireSurface(tireSpeed, tireAngle)
-    local rotationScalar = (1 / (2 * math.pi)) * 512
+local function drawTireSurface_Diffuse(tireSpeed, tireAngle, textureName)
+    local rotationScalar = (1 / (2 * math.pi)) * 1024
+    local texturePath = "Textures/Tires/MK_Tire_" .. textureName .. "_Diffuse.dds"
     ui.beginBlurring()
-    ui.drawImage("dirt.dds", vec2(0 + (tireAngle * rotationScalar), 0), vec2(512 + (tireAngle * rotationScalar), 256), ui.ImageFit.Stretch)
-    ui.drawImage("dirt.dds", vec2(-512 + (tireAngle * rotationScalar), 0), vec2(0 + (tireAngle * rotationScalar), 256), ui.ImageFit.Stretch)
-    ui.drawRectFilled(vec2(-512 + (tireAngle * rotationScalar), 0), vec2(512 + (tireAngle * rotationScalar), 256), rgbm(0.2, 0.2, 0.2, 0.9))
-    ui.endBlurring(vec2((0.006 * (math.abs(tireSpeed) + 0.001)) ^ 2.0, 0))
+    ui.drawImage(texturePath, vec2(-1024 + (tireAngle * rotationScalar), 0), vec2(0 + (tireAngle * rotationScalar), 512), ui.ImageFit.Stretch)
+    ui.drawImage(texturePath, vec2(0 + (tireAngle * rotationScalar), 0), vec2(1024 + (tireAngle * rotationScalar), 512), ui.ImageFit.Stretch)
+    ui.drawImage(texturePath, vec2(1024 + (tireAngle * rotationScalar), 0), vec2(2048 + (tireAngle * rotationScalar), 512), ui.ImageFit.Stretch)
+    texturePath = "Textures/Tires/MK_Tire_" .. textureName .. "_Diffuse_Blur_Diffuse.dds"
+    local fadeFactor = math.clamp((0.05 * (math.abs(tireSpeed) + 0.001)) ^ 3.0, 0, 1)
+    ui.drawImage(texturePath, vec2(-1024 + (tireAngle * rotationScalar), 0), vec2(0 + (tireAngle * rotationScalar), 512), rgbm(1, 1, 1, fadeFactor), ui.ImageFit.Stretch)
+    ui.drawImage(texturePath, vec2(0 + (tireAngle * rotationScalar), 0), vec2(1024 + (tireAngle * rotationScalar), 512), rgbm(1, 1, 1, fadeFactor), ui.ImageFit.Stretch)
+    ui.drawImage(texturePath, vec2(1024 + (tireAngle * rotationScalar), 0), vec2(2048 + (tireAngle * rotationScalar), 512), rgbm(1, 1, 1, fadeFactor), ui.ImageFit.Stretch)
+    ui.endBlurring(vec2(
+        (0.005 * (math.abs(tireSpeed) + 0.001)) ^ 3.5,
+        0
+    ))
+end
+
+local function drawTireSurface_Normal(tireSpeed, tireAngle, textureName)
+    local rotationScalar = (1 / (2 * math.pi)) * 1024
+    local texturePath = "Textures/Tires/MK_Tire_" .. textureName .. "_Normal_AC.dds"
+    ui.beginBlurring()
+    ui.drawImage(texturePath, vec2(-1024 + (tireAngle * rotationScalar), 0), vec2(0 + (tireAngle * rotationScalar), 512), ui.ImageFit.Stretch)
+    ui.drawImage(texturePath, vec2(0 + (tireAngle * rotationScalar), 0), vec2(1024 + (tireAngle * rotationScalar), 512), ui.ImageFit.Stretch)
+    ui.drawImage(texturePath, vec2(1024 + (tireAngle * rotationScalar), 0), vec2(2048 + (tireAngle * rotationScalar), 512), ui.ImageFit.Stretch)
+    texturePath = "Textures/Tires/MK_Tire_" .. textureName .. "_Diffuse_Blur_Normal_AC.dds"
+    local fadeFactor = math.clamp((0.05 * (math.abs(tireSpeed) + 0.001)) ^ 3.0, 0, 1)
+    ui.drawImage(texturePath, vec2(-1024 + (tireAngle * rotationScalar), 0), vec2(0 + (tireAngle * rotationScalar), 512), rgbm(1, 1, 1, fadeFactor), ui.ImageFit.Stretch)
+    ui.drawImage(texturePath, vec2(0 + (tireAngle * rotationScalar), 0), vec2(1024 + (tireAngle * rotationScalar), 512), rgbm(1, 1, 1, fadeFactor), ui.ImageFit.Stretch)
+    ui.drawImage(texturePath, vec2(1024 + (tireAngle * rotationScalar), 0), vec2(2048 + (tireAngle * rotationScalar), 512), rgbm(1, 1, 1, fadeFactor), ui.ImageFit.Stretch)
+    ui.endBlurring(vec2(
+        (0.005 * (math.abs(tireSpeed) + 0.001)) ^ 3.5,
+        0
+    ))
+end
+
+local function drawTireSurface_Maps(tireSpeed, tireAngle, textureName)
+    local rotationScalar = (1 / (2 * math.pi)) * 1024
+    local texturePath = "Textures/Tires/MK_Tire_" .. textureName .. "_ksPPMM_Maps.dds"
+    ui.beginBlurring()
+    ui.drawImage(texturePath, vec2(-1024 + (tireAngle * rotationScalar), 0), vec2(0 + (tireAngle * rotationScalar), 512), ui.ImageFit.Stretch)
+    ui.drawImage(texturePath, vec2(0 + (tireAngle * rotationScalar), 0), vec2(1024 + (tireAngle * rotationScalar), 512), ui.ImageFit.Stretch)
+    ui.drawImage(texturePath, vec2(1024 + (tireAngle * rotationScalar), 0), vec2(2048 + (tireAngle * rotationScalar), 512), ui.ImageFit.Stretch)
+    texturePath = "Textures/Tires/MK_Tire_" .. textureName .. "_Diffuse_Blur_ksPPMM_Maps.dds"
+    local fadeFactor = math.clamp((0.05 * (math.abs(tireSpeed) + 0.001)) ^ 3.0, 0, 1)
+    ui.drawImage(texturePath, vec2(-1024 + (tireAngle * rotationScalar), 0), vec2(0 + (tireAngle * rotationScalar), 512), rgbm(1, 1, 1, fadeFactor), ui.ImageFit.Stretch)
+    ui.drawImage(texturePath, vec2(0 + (tireAngle * rotationScalar), 0), vec2(1024 + (tireAngle * rotationScalar), 512), rgbm(1, 1, 1, fadeFactor), ui.ImageFit.Stretch)
+    ui.drawImage(texturePath, vec2(1024 + (tireAngle * rotationScalar), 0), vec2(2048 + (tireAngle * rotationScalar), 512), rgbm(1, 1, 1, fadeFactor), ui.ImageFit.Stretch)
+    ui.endBlurring(vec2(
+        (0.005 * (math.abs(tireSpeed) + 0.001)) ^ 3.5,
+        0
+    ))
 end
 
 local function rotateTransformAroundLocalPivot(localTransform, pivotLocal, axisLocal, angleRad)
@@ -316,8 +373,32 @@ function script.update(dt)
         tire.angle = tire.angle + (car.wheels[tireIndex - 1].angularSpeed * dt)
         tire.angle = tire.angle - math.floor(tire.angle / (2 * math.pi)) * (2 * math.pi)
         tire.canvas:clear()
-        tire.canvas:update(function() drawTireSurface(car.wheels[tireIndex - 1].angularSpeed, tire.angle) end)
+        tire.canvas:update(function()
+            drawTireSurface_Diffuse(
+                car.wheels[tireIndex - 1].angularSpeed,
+                tire.angle * (tireIndex <= 2 and -1 or 1),
+                tire.textureName or tire.name
+            )
+        end)
         tire.surface:setMaterialTexture('txDiffuse', tire.canvas)
+        tire.canvasNormal:clear()
+        tire.canvasNormal:update(function()
+            drawTireSurface_Normal(
+                car.wheels[tireIndex - 1].angularSpeed,
+                tire.angle * (tireIndex <= 2 and -1 or 1),
+                tire.textureName or tire.name
+            )
+        end)
+        tire.surface:setMaterialTexture('txNormal', tire.canvasNormal)
+        tire.canvasMaps:clear()
+        tire.canvasMaps:update(function()
+            drawTireSurface_Maps(
+                car.wheels[tireIndex - 1].angularSpeed,
+                tire.angle * (tireIndex <= 2 and -1 or 1),
+                tire.textureName or tire.name
+            )
+        end)
+        tire.surface:setMaterialTexture('txMaps', tire.canvasMaps)
 
         ac.debug("tire angle " .. tireIndex, tire.angle)
     end
