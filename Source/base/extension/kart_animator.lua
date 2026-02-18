@@ -7,7 +7,7 @@ local KartAnimator = class("KartAnimator")
 function KartAnimator:initialize()
     -- Physics configuration
     self.physics = {
-        brakeDisc = Physics{
+        brakeDisc = Physics {
             posMax = 1,
             posMin = -1,
             center = 0,
@@ -19,7 +19,7 @@ function KartAnimator:initialize()
             forceMax = 30,
             constantForce = 0,
         },
-        sidepodRight = NodeAnimator{
+        sidepodRight = NodeAnimator {
             nodeName = "SidepodBouncerRight",
             posMax = 0.02,
             posMin = -0.02,
@@ -34,7 +34,7 @@ function KartAnimator:initialize()
             flipped = false,
             vibration = 0.0,
         },
-        sidepodLeft = NodeAnimator{
+        sidepodLeft = NodeAnimator {
             nodeName = "SidepodBouncerLeft",
             posMax = 0.02,
             posMin = -0.02,
@@ -49,7 +49,7 @@ function KartAnimator:initialize()
             flipped = true,
             vibration = 0.0,
         },
-        bumperRear = NodeAnimator{
+        bumperRear = NodeAnimator {
             nodeName = "RearBumperPlastic",
             posMax = 0.05,
             posMin = -0.05,
@@ -65,7 +65,7 @@ function KartAnimator:initialize()
             flipped = false,
             vibration = 0.0,
         },
-        bumperRearVertical = NodeAnimator{
+        bumperRearVertical = NodeAnimator {
             nodeName = "RearBumperBracket",
             posMax = 0.02,
             posMin = -0.01,
@@ -80,7 +80,7 @@ function KartAnimator:initialize()
             endstopRate = 100,
             flipped = false,
         },
-        bumperRearAxial = NodeAnimator{
+        bumperRearAxial = NodeAnimator {
             nodeName = "RearBumperBracketRotator",
             posMax = 0.5,
             posMin = -0.5,
@@ -94,7 +94,7 @@ function KartAnimator:initialize()
             constantForce = 0,
             flipped = false,
         },
-        nassau = NodeAnimator{
+        nassau = NodeAnimator {
             nodeName = "NassauBouncer",
             posMax = 0.1,
             posMin = -0.1,
@@ -109,7 +109,7 @@ function KartAnimator:initialize()
             endstopRate = 70,
             vibration = 0.0,
         },
-        nosecone = NodeAnimator{
+        nosecone = NodeAnimator {
             nodeName = "NoseconeBouncer",
             posMax = 0.04,
             posMin = -0.04,
@@ -152,37 +152,52 @@ function KartAnimator:initialize()
 
     -- Initialize pedal nodes
     for _, pedal in pairs(self.nodes.pedals) do
-        pedal.node = ac.findNodes(pedal.node)
-        pedal.node:storeCurrentTransformation()
-        pedal.forward = pedal.node:getLook()
-        pedal.up = pedal.node:getUp()
+        local ref = ac.findNodes(pedal.node)
+        if not ref:empty() then
+            pedal.node = ref
+            pedal.node:storeCurrentTransformation()
+            pedal.forward = pedal.node:getLook()
+            pedal.up = pedal.node:getUp()
+        else
+            pedal.node = nil
+        end
     end
 
     -- Initialize brake system nodes
     for _, part in pairs(self.nodes.brakeSystem) do
-        part.node = ac.findNodes(part.node)
-        part.node:storeCurrentTransformation()
-        if part.node:getLook() then
-            part.forward = part.node:getLook()
-            part.up = part.node:getUp()
+        local ref = ac.findNodes(part.node)
+        if not ref:empty() then
+            part.node = ref
+            part.node:storeCurrentTransformation()
+            if part.node:getLook() then
+                part.forward = part.node:getLook()
+                part.up = part.node:getUp()
+            end
+            part.position = part.node:getPosition()
+        else
+            part.node = nil
         end
-        part.position = part.node:getPosition()
     end
 
     -- Initialize steering nodes
     for _, part in pairs(self.nodes.steering) do
-        part.node = ac.findNodes(part.node)
+        local ref = ac.findNodes(part.node)
+        part.node = not ref:empty() and ref or nil
     end
 
     -- Initialize rear axle nodes
     for _, part in pairs(self.nodes.rearAxle) do
-        part.node = ac.findNodes(part.node)
-        part.node:storeCurrentTransformation()
-        part.forward = part.node:getLook()
-        part.up = part.node:getUp()
+        local ref = ac.findNodes(part.node)
+        if not ref:empty() then
+            part.node = ref
+            part.node:storeCurrentTransformation()
+            part.forward = part.node:getLook()
+            part.up = part.node:getUp()
+        else
+            part.node = nil
+        end
     end
 end
-
 
 function KartAnimator:update(dt, angularAcceleration)
     local forceSidepodRight = -car.acceleration.y + (angularAcceleration.z * 0.1)
@@ -206,45 +221,63 @@ function KartAnimator:update(dt, angularAcceleration)
     self.physics.brakeDisc:step(car.acceleration.x * -100, dt)
     local brakeDiscAnimPos = self.physics.brakeDisc.position
 
-    self.nodes.brakeSystem.disc.node:setPosition(
-        self.nodes.brakeSystem.disc.position +
-        vec3(0, 0, brakeDiscAnimPos * helpers.mapRange(car.brake, 0, 0.2, 1, 0, true) * 0.0005)
-    )
-    self.nodes.brakeSystem.pad1.node:setPosition(
-        self.nodes.brakeSystem.pad1.position +
-        vec3(helpers.mapRange(car.brake, 0, 0.2, 0, -0.001, true), 0, 0)
-    )
-    self.nodes.brakeSystem.pad2.node:setPosition(
-        self.nodes.brakeSystem.pad2.position +
-        vec3(helpers.mapRange(car.brake, 0, 0.2, 0, 0.001, true), 0, 0)
-    )
+    if self.nodes.brakeSystem.disc.node then
+        self.nodes.brakeSystem.disc.node:setPosition(
+            self.nodes.brakeSystem.disc.position +
+            vec3(0, 0, brakeDiscAnimPos * helpers.mapRange(car.brake, 0, 0.2, 1, 0, true) * 0.0005)
+        )
+    end
+    if self.nodes.brakeSystem.pad1.node then
+        self.nodes.brakeSystem.pad1.node:setPosition(
+            self.nodes.brakeSystem.pad1.position +
+            vec3(helpers.mapRange(car.brake, 0, 0.2, 0, -0.001, true), 0, 0)
+        )
+    end
+    if self.nodes.brakeSystem.pad2.node then
+        self.nodes.brakeSystem.pad2.node:setPosition(
+            self.nodes.brakeSystem.pad2.position +
+            vec3(helpers.mapRange(car.brake, 0, 0.2, 0, 0.001, true), 0, 0)
+        )
+    end
 
     -- Update brake lever
-    self.nodes.brakeSystem.lever.node:setOrientation(
-        self.nodes.brakeSystem.lever.forward, 
-        self.nodes.brakeSystem.lever.up + vec3(0, car.brake * 0.47, 0)
-    )
+    if self.nodes.brakeSystem.lever.node then
+        self.nodes.brakeSystem.lever.node:setOrientation(
+            self.nodes.brakeSystem.lever.forward,
+            self.nodes.brakeSystem.lever.up + vec3(0, car.brake * 0.47, 0)
+        )
+    end
 
     -- Update steering tierods
-    self.nodes.steering.tierodLControl.node:setPosition(
-        helpers.getPositionInCarFrame(self.nodes.steering.tierodLTarget.node, self.nodes.steering.carNode.node)
-    )
-    self.nodes.steering.tierodRControl.node:setPosition(
-        helpers.getPositionInCarFrame(self.nodes.steering.tierodRTarget.node, self.nodes.steering.carNode.node)
-    )
+    if self.nodes.steering.tierodLTarget.node and self.nodes.steering.tierodLControl.node then
+        self.nodes.steering.tierodLControl.node:setPosition(
+            helpers.getPositionInCarFrame(self.nodes.steering.tierodLTarget.node, self.nodes.steering.carNode.node)
+        )
+    end
+    if self.nodes.steering.tierodRTarget.node and self.nodes.steering.tierodRControl.node then
+        self.nodes.steering.tierodRControl.node:setPosition(
+            helpers.getPositionInCarFrame(self.nodes.steering.tierodRTarget.node, self.nodes.steering.carNode.node)
+        )
+    end
 
     -- Update pedals with converted forces
-    self.nodes.pedals.brake.node:setOrientation(
-        self.nodes.pedals.brake.forward + vec3(0, 0, car.brake * 0.2),
-        self.nodes.pedals.brake.up
-    )
-    self.nodes.pedals.gas.node:setOrientation(
-        self.nodes.pedals.gas.forward + vec3(0, 0, car.gas * 0.4),
-        self.nodes.pedals.gas.up
-    )
+    if self.nodes.pedals.brake.node then
+        self.nodes.pedals.brake.node:setOrientation(
+            self.nodes.pedals.brake.forward + vec3(0, 0, car.brake * 0.2),
+            self.nodes.pedals.brake.up
+        )
+    end
+    if self.nodes.pedals.gas.node then
+        self.nodes.pedals.gas.node:setOrientation(
+            self.nodes.pedals.gas.forward + vec3(0, 0, car.gas * 0.4),
+            self.nodes.pedals.gas.up
+        )
+    end
 
     -- Rotate rear axle
-    self.nodes.rearAxle.axleNode.node:rotate(vec3(-1, 0, 0), car.wheels[3].angularSpeed * dt)
+    if self.nodes.rearAxle.axleNode.node then
+        self.nodes.rearAxle.axleNode.node:rotate(vec3(-1, 0, 0), car.wheels[3].angularSpeed * dt)
+    end
 end
 
-return KartAnimator 
+return KartAnimator

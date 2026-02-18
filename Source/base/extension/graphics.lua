@@ -113,6 +113,12 @@ local partConfigurations = {
 local baseSetupKey = 'modkart_c2_shared_' .. car.index
 
 
+local function findNode(name)
+    local ref = ac.findNodes(name)
+    return not ref:empty() and ref or nil
+end
+
+
 local function updatePartVisibility(partConfig)
     local setupItem = ac.load(baseSetupKey .. partConfig.setupKeySuffix) or 0 -- Default to 0
 
@@ -122,8 +128,7 @@ local function updatePartVisibility(partConfig)
         local isVisible = (optionValue == setupItem)
         -- Set visibility for all nodes associated with this option
         for _, nodeName in ipairs(nodeNames) do
-            local node = ac.findNodes(nodeName)
-            -- Check if node exists before trying to set visibility
+            local node = findNode(nodeName)
             if node then
                 node:setVisible(isVisible)
             end
@@ -140,11 +145,11 @@ local kartAnimator = KartAnimator()
 
 local antiResetAdder = 0
 
-local carNode = ac.findNodes("BODYTR")
-local tierodLTarget = ac.findNodes("DIR2_anim_tierodLF")
-local tierodRTarget = ac.findNodes("DIR2_anim_tierodRF")
-local tierodLControl = ac.findNodes("DIR_anim_tierodLF")
-local tierodRControl = ac.findNodes("DIR_anim_tierodRF")
+local carNode = findNode("BODYTR")
+local tierodLTarget = findNode("DIR2_anim_tierodLF")
+local tierodRTarget = findNode("DIR2_anim_tierodRF")
+local tierodLControl = findNode("DIR_anim_tierodLF")
+local tierodRControl = findNode("DIR_anim_tierodRF")
 
 local tires = {
     {
@@ -327,8 +332,12 @@ function script.update(dt)
         kartAnimator:update(smoothDT, angularAcceleration)
     end
 
-    tierodLControl:setPosition(helpers.getPositionInCarFrame(tierodLTarget, carNode))
-    tierodRControl:setPosition(helpers.getPositionInCarFrame(tierodRTarget, carNode))
+    if tierodLControl and tierodLTarget and carNode then
+        tierodLControl:setPosition(helpers.getPositionInCarFrame(tierodLTarget, carNode))
+    end
+    if tierodRControl and tierodRTarget and carNode then
+        tierodRControl:setPosition(helpers.getPositionInCarFrame(tierodRTarget, carNode))
+    end
 
     -- Update visibility for all configured parts
     if sim.isInMainMenu then
