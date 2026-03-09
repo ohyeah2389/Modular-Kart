@@ -103,6 +103,7 @@ def write_lut_file(filename, values, outputs, params):
         f.write(f"\n;SLOPE_0_X\t{params.get('SLOPE_0_X', 'N/A')}")
         f.write(f"\n;SLOPE_1_X\t{params.get('SLOPE_1_X', 'N/A')}")
         f.write(f"\n;M_CLAMP\t{params.get('M_CLAMP', 'N/A')}")
+        f.write(f"\n;M_SCALING\t{params.get('M_SCALING', 1.00)}")
 
 
 def merge_with_base_params(params, tire_name, config):
@@ -196,6 +197,9 @@ def generate_all_luts(config_file='tire_parameters.toml'):
         except KeyError as e:
              print(f"\nError: Missing parameter {e} in section '{name.split('_')[0]}_{name.split('_')[1]}'. Skipping {name} LUT.")
              continue # Skip to the next configuration
+
+        m_scaling = params.get('M_SCALING', 1.00)
+        outputs = [y * m_scaling for y in outputs]
 
         # Write the file
         write_lut_file(filename, x_values, outputs, params)
