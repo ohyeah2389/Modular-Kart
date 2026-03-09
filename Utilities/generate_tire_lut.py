@@ -30,11 +30,12 @@ def calculate_lateral(x, params):
     slope_0 = params['SLOPE_0']
     slope_1 = params['SLOPE_1']
     m_clamp = params['M_CLAMP']
+    m_scaling = params.get('M_SCALING', 1.00)
     
     exp_term = 2 / (1 + np.exp(-x * (slope_1/10000))) - 1
     main_term = (20000 * exp_term) / (slope_1 * x)
     
-    result = ref_m + (adhesion/x) - (slope_0/10000) * x * main_term
+    result = (ref_m + (adhesion/x) - (slope_0/10000) * x * main_term) * m_scaling
     return min(result, m_clamp)
 
 
@@ -50,11 +51,12 @@ def calculate_longitudinal(x, params):
     slope_0_x = params['SLOPE_0_X']
     slope_1_x = params['SLOPE_1_X']
     m_clamp = params['M_CLAMP']
+    m_scaling = params.get('M_SCALING', 1.00)
     
     exp_term = 2 / (1 + np.exp(-x * ((slope_1 * slope_1_x)/10000))) - 1
     main_term = (20000 * exp_term) / ((slope_1 * slope_1_x) * x)
     
-    result = (ref_m * x_mult) + (adhesion/x) - ((slope_0 * slope_0_x)/10000) * x * main_term
+    result = ((ref_m * x_mult) + (adhesion/x) - ((slope_0 * slope_0_x)/10000) * x * main_term) * m_scaling
     return min(result, m_clamp)
 
 
@@ -197,9 +199,6 @@ def generate_all_luts(config_file='tire_parameters.toml'):
         except KeyError as e:
              print(f"\nError: Missing parameter {e} in section '{name.split('_')[0]}_{name.split('_')[1]}'. Skipping {name} LUT.")
              continue # Skip to the next configuration
-
-        m_scaling = params.get('M_SCALING', 1.00)
-        outputs = [y * m_scaling for y in outputs]
 
         # Write the file
         write_lut_file(filename, x_values, outputs, params)
