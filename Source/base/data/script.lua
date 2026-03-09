@@ -139,7 +139,7 @@ function script.update(dt)
         game.car_cphys.steer = newSteer
         lastSteer = newSteer
     else
-        ffb.update(dt)
+        --ffb.update(dt)
     end
 
     local tireLF_latFlexInput = car.wheels[0].fy --flexFilter(data.controllerInputs[0], car.wheels[0].fy, dt, 0.0005)
