@@ -264,22 +264,47 @@ local function drawTireSurface_Normal(tireSpeed, tireAngle, textureName)
     ))
 end
 
-local function drawTireSurface_Maps(tireSpeed, tireAngle, textureName)
+local function drawTireSurface_Maps(tireSpeed, tireAngle, textureName, tireIndex)
     local rotationScalar = (1 / (2 * math.pi)) * 1024
     local texturePath = "Textures/Tires/MK_Tire_" .. textureName .. "_ksPPMM_Maps.dds"
     ui.beginBlurring()
+
     ui.drawImage(texturePath, vec2(-1024 + (tireAngle * rotationScalar), 0), vec2(0 + (tireAngle * rotationScalar), 512), ui.ImageFit.Stretch)
     ui.drawImage(texturePath, vec2(0 + (tireAngle * rotationScalar), 0), vec2(1024 + (tireAngle * rotationScalar), 512), ui.ImageFit.Stretch)
     ui.drawImage(texturePath, vec2(1024 + (tireAngle * rotationScalar), 0), vec2(2048 + (tireAngle * rotationScalar), 512), ui.ImageFit.Stretch)
+
     texturePath = "Textures/Tires/MK_Tire_" .. textureName .. "_Diffuse_Blur_ksPPMM_Maps.dds"
     local fadeFactor = math.clamp((0.03 * (math.abs(tireSpeed) + 0.001)) ^ 2.5, 0, 1)
+
     ui.drawImage(texturePath, vec2(-1024 + (tireAngle * rotationScalar), 0), vec2(0 + (tireAngle * rotationScalar), 512), rgbm(1, 1, 1, fadeFactor), ui.ImageFit.Stretch)
     ui.drawImage(texturePath, vec2(0 + (tireAngle * rotationScalar), 0), vec2(1024 + (tireAngle * rotationScalar), 512), rgbm(1, 1, 1, fadeFactor), ui.ImageFit.Stretch)
     ui.drawImage(texturePath, vec2(1024 + (tireAngle * rotationScalar), 0), vec2(2048 + (tireAngle * rotationScalar), 512), rgbm(1, 1, 1, fadeFactor), ui.ImageFit.Stretch)
+
+    local scrubFactor = math.clamp(math.remap(car.wheels[tireIndex - 1].tyreVirtualKM, 0, 0.01, 0, 1), 0, 1)
+    local grainFactor = math.clamp(math.remap(car.wheels[tireIndex - 1].tyreVirtualKM, 0, 1.3, 0, 1), 0, 1) ^ 0.5
+
+    ac.debug("scrubFactor" .. tireIndex - 1, scrubFactor)
+    ac.debug("grainFactor" .. tireIndex - 1, grainFactor)
+
+    local colorCenter = rgbm(1, 0, 0.5, scrubFactor)
+    local colorEdge = rgbm(1, 0, 1, 0)
+
+    ui.drawRectFilled(vec2(0, 0.25*512), vec2(1024, 0.75*512), colorCenter)
+    ui.drawRectFilledMultiColor(vec2(0, 0*512), vec2(1024, 0.25*512), colorEdge, colorEdge, colorCenter, colorCenter)
+    ui.drawRectFilledMultiColor(vec2(0, 0.75*512), vec2(1024, 1*512), colorCenter, colorCenter, colorEdge, colorEdge)
+
+    texturePath = "dirt.dds"
+    local textureMixColor = rgbm(1, 0, 0.2, 0.4 * grainFactor)
+
+    ui.drawImage(texturePath, vec2(-1024 + (tireAngle * rotationScalar), 0), vec2(0 + (tireAngle * rotationScalar), 512), textureMixColor, ui.ImageFit.Stretch)
+    ui.drawImage(texturePath, vec2(0 + (tireAngle * rotationScalar), 0), vec2(1024 + (tireAngle * rotationScalar), 512), textureMixColor, ui.ImageFit.Stretch)
+    ui.drawImage(texturePath, vec2(1024 + (tireAngle * rotationScalar), 0), vec2(2048 + (tireAngle * rotationScalar), 512), textureMixColor, ui.ImageFit.Stretch)
+
     ui.endBlurring(vec2(
         (0.005 * (math.abs(tireSpeed) + 0.001)) ^ 3.5,
         0
     ))
+
 end
 
 local function rotateTransformAroundLocalPivot(localTransform, pivotLocal, axisLocal, angleRad)
@@ -404,7 +429,8 @@ function script.update(dt)
             drawTireSurface_Maps(
                 car.wheels[tireIndex - 1].angularSpeed,
                 tire.angle * (tireIndex <= 2 and -1 or 1),
-                tire.textureName or tire.name
+                tire.textureName or tire.name,
+                tireIndex
             )
         end)
         tire.surface:setMaterialTexture('txMaps', tire.canvasMaps)
