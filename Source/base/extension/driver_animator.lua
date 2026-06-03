@@ -357,6 +357,7 @@ function DriverAnimator:setState(stateName, active, held)
         end
     end
 end
+
 function DriverAnimator:updateStates(dt)
     for stateName, state in pairs(self.states) do
         if state.active or state.rewinding then
@@ -437,7 +438,7 @@ local function driverIK(self, dt)
 
     -- Define rotation parameters for hand target on wheel
     local rotationOrigin = vec3(0, 0.47, 0.15)  -- Center of rotation
-    local rotationRadius = -0.19                  -- Distance from origin
+    local rotationRadius = -0.175                  -- Distance from origin
     local rotationAxisLook = vec3(0, 0.85, -1):normalize()         -- Axis to rotate around (e.g., positive X)
     local rotationAxisInitialUp = vec3(1, 0, 0):normalize()   -- Direction corresponding to 0 angle (e.g., negative Z)
 
