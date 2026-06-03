@@ -45,96 +45,9 @@ function FrameRateChecker:update(dt)
 end
 
 
--- Configuration table for customizable parts
-local partConfigurations = {
-    wheel = {
-        setupKeySuffix = '.wheel',
-        options = {
-            [0] = {"SteeringWheelClassic"},
-            [1] = {"SteeringWheelModern"},
-            [2] = {"SteeringWheelOTK"},
-            [3] = {"SteeringWheelRetro"}
-        }
-    },
-    nassau = {
-        setupKeySuffix = '.nassau',
-        options = {
-            [0] = {"OTK M11 Nassau Plastic"},
-            [1] = {"OTK M7 Nassau"},
-            [2] = {"OTK M6 Nassau Plastic"},
-            [3] = {"KG 508 Nassau Plastic"},
-            [4] = {"Eurostar Dynamica Nassau Plastic"},
-            [5] = {"KG Buru Nassau Plastic"},
-            [6] = {"KG 509 Nassau Plastic"},
-            [7] = {"KR DynEvo Nassau"},
-            [8] = {"CIK02 Nassau Plastic"},
-            [9] = {"Oval Nassau Polycarbonate"},
-            [10] = {"Metal Fairing Nassau Metal"},
-            [100] = {} -- hide all
-        }
-    },
-    frontBumper = {
-        setupKeySuffix = '.frontBumper',
-        options = {
-            [0] = {"OTK M11 Nosecone"},
-            [1] = {"OTK M6 Nosecone"},
-            [2] = {"KG 509 Nosecone"},
-            [3] = {"KG506 Nosecone"},
-            [4] = {"KG Buru Nosecone"},
-            [5] = {"KG FP7 Nosecone"},
-            [6] = {"KR DynEvo Nosecone"},
-            [7] = {"CIK02 Nosecone Plastic"},
-            [8] = {"OvalNosecone"},
-            [100] = {} -- hide all
-        }
-    },
-    rearBumper = {
-        setupKeySuffix = '.rearBumper',
-        options = {
-            [0] = {"RearBumperMount"},
-            [1] = {"RearBumperMetalNew"},
-            [2] = {"RearBumperMetalOld"},
-            [100] = {} -- hide all
-        }
-    },
-    sidepod = {
-        setupKeySuffix = '.sidepod',
-        options = {
-            [0] = {"OTK M10 Sidepod Left", "OTK M10 Sidepod Right"},
-            [1] = {"OTK M6 Sidepod Left", "OTK M6 Sidepod Right"},
-            [2] = {"KR DynEvo Sidepod Right", "KR DynEvo Sidepod Left"},
-            [3] = {"OldArrow SidepodBraceBar Left", "OldArrow SidepodBraceBar Right"},
-            [4] = {"OvalSidepodRight", "OvalSidepodLeft"},
-            [5] = {"SidepodMetal_L", "SidepodMetal_R"},
-            [100] = {} -- hide all
-        }
-    }
-}
-
-local baseSetupKey = 'modkart_c2_shared_' .. car.index
-
-
 local function findNode(name)
     local ref = ac.findNodes(name)
     return not ref:empty() and ref or nil
-end
-
-
-local function updatePartVisibility(partConfig)
-    local setupItem = ac.load(baseSetupKey .. partConfig.setupKeySuffix) or 0 -- Default to 0
-
-    -- Iterate through all defined options for this part type
-    for optionValue, nodeNames in pairs(partConfig.options) do
-        -- Determine if this option is the one selected in the setup
-        local isVisible = (optionValue == setupItem)
-        -- Set visibility for all nodes associated with this option
-        for _, nodeName in ipairs(nodeNames) do
-            local node = findNode(nodeName)
-            if node then
-                node:setVisible(isVisible)
-            end
-        end
-    end
 end
 
 
@@ -365,12 +278,6 @@ function script.update(dt)
         tierodRControl:setPosition(helpers.getPositionInCarFrame(tierodRTarget, carNode))
     end
 
-    -- Update visibility for all configured parts
-    if sim.isInMainMenu then
-        for _, partConfig in pairs(partConfigurations) do
-            updatePartVisibility(partConfig)
-        end
-    end
     for tireIndex, tire in ipairs(tires) do
         local parentTransform = tire.base:getParent():getWorldTransformationRaw()
         local localTransform = tire.susp:getWorldTransformationRaw():mul(parentTransform:inverse())

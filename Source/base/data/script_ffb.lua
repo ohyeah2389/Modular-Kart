@@ -41,10 +41,12 @@ function ffb.update(dt)
     ffb.lastFFB = dampedFFB
 
     -- Debug output
-    ac.debug('ffb: dampingFactor', ffb.dampingFactor)
-    ac.debug('ffb: oscillationCounter', ffb.oscillationCounter)
-    ac.debug('ffb: currentFFB', currentFFB)
-    ac.debug('ffb: dampedFFB', dampedFFB)
+    if DEBUG then
+        ac.debug('ffb: dampingFactor', ffb.dampingFactor)
+        ac.debug('ffb: oscillationCounter', ffb.oscillationCounter)
+        ac.debug('ffb: currentFFB', currentFFB)
+        ac.debug('ffb: dampedFFB', dampedFFB)
+    end
 end
 
 
