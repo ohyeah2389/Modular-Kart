@@ -2,7 +2,6 @@
 -- Authored by ohyeah2389
 
 local helpers = require("helpers")
-local physObj = require("physics_object")
 local cphys = ac.getCarPhysics(car.index) or {}
 
 --local sharedData = ac.connect({
@@ -80,7 +79,8 @@ local tires = {
         canvasNormal = ui.ExtraCanvas(vec2(1024, 512)),
         canvasMaps = ui.ExtraCanvas(vec2(1024, 512)),
         surface = ac.findSkinnedMeshes("Tire_FrontLeft"),
-        angle = 0
+        angle = 0,
+        reverseAngle = false
     },
     {
         name = "FrontRight",
@@ -96,7 +96,8 @@ local tires = {
         canvasNormal = ui.ExtraCanvas(vec2(1024, 512)),
         canvasMaps = ui.ExtraCanvas(vec2(1024, 512)),
         surface = ac.findSkinnedMeshes("Tire_FrontRight"),
-        angle = 1
+        angle = 1,
+        reverseAngle = false
     },
     {
         name = "RearLeft",
@@ -112,7 +113,8 @@ local tires = {
         canvasNormal = ui.ExtraCanvas(vec2(1024, 512)),
         canvasMaps = ui.ExtraCanvas(vec2(1024, 512)),
         surface = ac.findSkinnedMeshes("Tire_RearLeft"),
-        angle = 2
+        angle = 2,
+        reverseAngle = true
     },
     {
         name = "RearRight",
@@ -128,7 +130,8 @@ local tires = {
         canvasNormal = ui.ExtraCanvas(vec2(1024, 512)),
         canvasMaps = ui.ExtraCanvas(vec2(1024, 512)),
         surface = ac.findSkinnedMeshes("Tire_RearRight"),
-        angle = 3
+        angle = 3,
+        reverseAngle = false
     }
 }
 
@@ -312,7 +315,7 @@ function script.update(dt)
         render.debugCross(flexPivotWorld, 0.1, rgbm(0, 1, 0, 1))
 
         -- Update tire canvas and rotation tracking
-        tire.angle = tire.angle + (car.wheels[tireIndex - 1].angularSpeed * dt)
+        tire.angle = tire.angle + (car.wheels[tireIndex - 1].angularSpeed * dt * (tire.reverseAngle and -1 or 1))
         tire.angle = tire.angle - math.floor(tire.angle / (2 * math.pi)) * (2 * math.pi)
         tire.canvas:clear()
         tire.canvas:update(function()
