@@ -3,6 +3,9 @@
 
 
 local helpers = {}
+local zeroVec = vec3()
+local nodeWorldPosScratch = vec3()
+local carFramePosScratch = vec3()
 
 ---Calculates the car's angular acceleration based on current and previous angular velocity
 ---@param currentAngularVelocity vec3
@@ -34,8 +37,9 @@ end
 function helpers.getPositionInCarFrame(node, carNode)
     local carTransform = carNode:getTransformationRaw()
     local carTransformInv = carTransform:inverse()
-    local nodeWorldPos = node:getWorldTransformationRaw():transformPoint(vec3())
-    return carTransformInv:transformPoint(nodeWorldPos)
+    node:getWorldTransformationRaw():transformPointTo(nodeWorldPosScratch, zeroVec)
+    carTransformInv:transformPointTo(carFramePosScratch, nodeWorldPosScratch)
+    return carFramePosScratch
 end
 
 

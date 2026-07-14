@@ -1,6 +1,8 @@
 -- Modular Kart Class 2 CSP Graphics Script
 -- Authored by ohyeah2389
 
+DEBUG = false
+
 local helpers = require("helpers")
 local cphys = ac.getCarPhysics(car.index) or {}
 
@@ -30,6 +32,11 @@ local tierodLTarget = findNode("DIR2_anim_tierodLF")
 local tierodRTarget = findNode("DIR2_anim_tierodRF")
 local tierodLControl = findNode("DIR_anim_tierodLF")
 local tierodRControl = findNode("DIR_anim_tierodRF")
+local tierodLPos = vec3()
+local tierodRPos = vec3()
+local drawTireSurface_Diffuse
+local drawTireSurface_Normal
+local drawTireSurface_Maps
 
 local tires = {
     {
@@ -102,93 +109,142 @@ local tires = {
     }
 }
 
-for _, tire in ipairs(tires) do
+for tireIndex, tire in ipairs(tires) do
     tire.base:storeCurrentTransformation()
     tire.flex:storeCurrentTransformation()
     tire.surface:ensureUniqueMaterials()
     tire.flexBaseTransform = tire.flex:getTransformationRaw():clone()
+    tire.mapsUpdateClock = 1
+    tire.currentWheelSpeed = 0
+    tire.currentSignedAngle = 0
+    tire.currentTextureName = tire.textureName or tire.name
+    tire.updateDiffuseCallback = function()
+        drawTireSurface_Diffuse(tire.currentWheelSpeed, tire.currentSignedAngle, tire.currentTextureName)
+    end
+    tire.updateNormalCallback = function()
+        drawTireSurface_Normal(tire.currentWheelSpeed, tire.currentSignedAngle, tire.currentTextureName)
+    end
+    tire.updateMapsCallback = function()
+        drawTireSurface_Maps(tire.currentWheelSpeed, tire.currentSignedAngle, tire.currentTextureName, tireIndex)
+    end
 end
 
 local lastDT = 1
 local dtSmoothing = 0.9
 
-local function drawTireSurface_Diffuse(tireSpeed, tireAngle, textureName)
-    local rotationScalar = (1 / (2 * math.pi)) * 1024
+local tireRotationScalar = (1 / (2 * math.pi)) * 1024
+local colorLUTSize = 256
+local mapsUpdateInterval = 1 / 30
+
+local function buildColorLUT(r, g, b, maxAlpha)
+    local lut = {}
+    for i = 0, colorLUTSize do
+        lut[i] = rgbm(r, g, b, (i / colorLUTSize) * maxAlpha)
+    end
+    return lut
+end
+
+local function getLUTColor(lut, value)
+    local index = math.floor(math.clamp(value, 0, 1) * colorLUTSize + 0.5)
+    return lut[index]
+end
+
+local fadeColorLUT = buildColorLUT(1, 1, 1, 1)
+local scrubColorLUT = buildColorLUT(1, 0, 0.5, 1)
+local grainColorLUT = buildColorLUT(1, 0, 0.2, 0.4)
+local edgeColor = rgbm(1, 0, 1, 0)
+
+local tireSpanMin = { vec2(), vec2(), vec2() }
+local tireSpanMax = { vec2(), vec2(), vec2() }
+local blurVector = vec2()
+local rectTopMin = vec2(0, 0)
+local rectTopMax = vec2(1024, 0.25 * 512)
+local rectCenterMin = vec2(0, 0.25 * 512)
+local rectCenterMax = vec2(1024, 0.75 * 512)
+local rectBottomMin = vec2(0, 0.75 * 512)
+local rectBottomMax = vec2(1024, 512)
+
+local function updateTireSpanBounds(tireAngle)
+    local x = tireAngle * tireRotationScalar
+    tireSpanMin[1].x, tireSpanMin[1].y = x - 1024, 0
+    tireSpanMax[1].x, tireSpanMax[1].y = x, 512
+    tireSpanMin[2].x, tireSpanMin[2].y = x, 0
+    tireSpanMax[2].x, tireSpanMax[2].y = x + 1024, 512
+    tireSpanMin[3].x, tireSpanMin[3].y = x + 1024, 0
+    tireSpanMax[3].x, tireSpanMax[3].y = x + 2048, 512
+end
+
+local function drawTireSpans(texturePath, color)
+    if color then
+        ui.drawImage(texturePath, tireSpanMin[1], tireSpanMax[1], color, ui.ImageFit.Stretch)
+        ui.drawImage(texturePath, tireSpanMin[2], tireSpanMax[2], color, ui.ImageFit.Stretch)
+        ui.drawImage(texturePath, tireSpanMin[3], tireSpanMax[3], color, ui.ImageFit.Stretch)
+    else
+        ui.drawImage(texturePath, tireSpanMin[1], tireSpanMax[1], ui.ImageFit.Stretch)
+        ui.drawImage(texturePath, tireSpanMin[2], tireSpanMax[2], ui.ImageFit.Stretch)
+        ui.drawImage(texturePath, tireSpanMin[3], tireSpanMax[3], ui.ImageFit.Stretch)
+    end
+end
+
+local function updateBlurVector(tireSpeed)
+    blurVector.x = (0.005 * (math.abs(tireSpeed) + 0.001)) ^ 3.5
+    blurVector.y = 0
+end
+
+drawTireSurface_Diffuse = function(tireSpeed, tireAngle, textureName)
+    updateTireSpanBounds(tireAngle)
     local texturePath = "Textures/Tires/MK_Tire_" .. textureName .. "_Diffuse.dds"
     ui.beginBlurring()
-    ui.drawImage(texturePath, vec2(-1024 + (tireAngle * rotationScalar), 0), vec2(0 + (tireAngle * rotationScalar), 512), ui.ImageFit.Stretch)
-    ui.drawImage(texturePath, vec2(0 + (tireAngle * rotationScalar), 0), vec2(1024 + (tireAngle * rotationScalar), 512), ui.ImageFit.Stretch)
-    ui.drawImage(texturePath, vec2(1024 + (tireAngle * rotationScalar), 0), vec2(2048 + (tireAngle * rotationScalar), 512), ui.ImageFit.Stretch)
+    drawTireSpans(texturePath)
     texturePath = "Textures/Tires/MK_Tire_" .. textureName .. "_Diffuse_Blur_Diffuse.dds"
     local fadeFactor = math.clamp((0.03 * (math.abs(tireSpeed) + 0.001)) ^ 2.5, 0, 1)
-    ui.drawImage(texturePath, vec2(-1024 + (tireAngle * rotationScalar), 0), vec2(0 + (tireAngle * rotationScalar), 512), rgbm(1, 1, 1, fadeFactor), ui.ImageFit.Stretch)
-    ui.drawImage(texturePath, vec2(0 + (tireAngle * rotationScalar), 0), vec2(1024 + (tireAngle * rotationScalar), 512), rgbm(1, 1, 1, fadeFactor), ui.ImageFit.Stretch)
-    ui.drawImage(texturePath, vec2(1024 + (tireAngle * rotationScalar), 0), vec2(2048 + (tireAngle * rotationScalar), 512), rgbm(1, 1, 1, fadeFactor), ui.ImageFit.Stretch)
-    ui.endBlurring(vec2(
-        (0.005 * (math.abs(tireSpeed) + 0.001)) ^ 3.5,
-        0
-    ))
+    drawTireSpans(texturePath, getLUTColor(fadeColorLUT, fadeFactor))
+    updateBlurVector(tireSpeed)
+    ui.endBlurring(blurVector)
 end
 
-local function drawTireSurface_Normal(tireSpeed, tireAngle, textureName)
-    local rotationScalar = (1 / (2 * math.pi)) * 1024
+drawTireSurface_Normal = function(tireSpeed, tireAngle, textureName)
+    updateTireSpanBounds(tireAngle)
     local texturePath = "Textures/Tires/MK_Tire_" .. textureName .. "_Normal_AC.dds"
     ui.beginBlurring()
-    ui.drawImage(texturePath, vec2(-1024 + (tireAngle * rotationScalar), 0), vec2(0 + (tireAngle * rotationScalar), 512), ui.ImageFit.Stretch)
-    ui.drawImage(texturePath, vec2(0 + (tireAngle * rotationScalar), 0), vec2(1024 + (tireAngle * rotationScalar), 512), ui.ImageFit.Stretch)
-    ui.drawImage(texturePath, vec2(1024 + (tireAngle * rotationScalar), 0), vec2(2048 + (tireAngle * rotationScalar), 512), ui.ImageFit.Stretch)
+    drawTireSpans(texturePath)
     texturePath = "Textures/Tires/MK_Tire_" .. textureName .. "_Diffuse_Blur_Normal_AC.dds"
     local fadeFactor = math.clamp((0.03 * (math.abs(tireSpeed) + 0.001)) ^ 2.5, 0, 1)
-    ui.drawImage(texturePath, vec2(-1024 + (tireAngle * rotationScalar), 0), vec2(0 + (tireAngle * rotationScalar), 512), rgbm(1, 1, 1, fadeFactor), ui.ImageFit.Stretch)
-    ui.drawImage(texturePath, vec2(0 + (tireAngle * rotationScalar), 0), vec2(1024 + (tireAngle * rotationScalar), 512), rgbm(1, 1, 1, fadeFactor), ui.ImageFit.Stretch)
-    ui.drawImage(texturePath, vec2(1024 + (tireAngle * rotationScalar), 0), vec2(2048 + (tireAngle * rotationScalar), 512), rgbm(1, 1, 1, fadeFactor), ui.ImageFit.Stretch)
-    ui.endBlurring(vec2(
-        (0.005 * (math.abs(tireSpeed) + 0.001)) ^ 3.5,
-        0
-    ))
+    drawTireSpans(texturePath, getLUTColor(fadeColorLUT, fadeFactor))
+    updateBlurVector(tireSpeed)
+    ui.endBlurring(blurVector)
 end
 
-local function drawTireSurface_Maps(tireSpeed, tireAngle, textureName, tireIndex)
-    local rotationScalar = (1 / (2 * math.pi)) * 1024
+drawTireSurface_Maps = function(tireSpeed, tireAngle, textureName, tireIndex)
+    updateTireSpanBounds(tireAngle)
     local texturePath = "Textures/Tires/MK_Tire_" .. textureName .. "_ksPPMM_Maps.dds"
     ui.beginBlurring()
 
-    ui.drawImage(texturePath, vec2(-1024 + (tireAngle * rotationScalar), 0), vec2(0 + (tireAngle * rotationScalar), 512), ui.ImageFit.Stretch)
-    ui.drawImage(texturePath, vec2(0 + (tireAngle * rotationScalar), 0), vec2(1024 + (tireAngle * rotationScalar), 512), ui.ImageFit.Stretch)
-    ui.drawImage(texturePath, vec2(1024 + (tireAngle * rotationScalar), 0), vec2(2048 + (tireAngle * rotationScalar), 512), ui.ImageFit.Stretch)
+    drawTireSpans(texturePath)
 
     texturePath = "Textures/Tires/MK_Tire_" .. textureName .. "_Diffuse_Blur_ksPPMM_Maps.dds"
     local fadeFactor = math.clamp((0.03 * (math.abs(tireSpeed) + 0.001)) ^ 2.5, 0, 1)
 
-    ui.drawImage(texturePath, vec2(-1024 + (tireAngle * rotationScalar), 0), vec2(0 + (tireAngle * rotationScalar), 512), rgbm(1, 1, 1, fadeFactor), ui.ImageFit.Stretch)
-    ui.drawImage(texturePath, vec2(0 + (tireAngle * rotationScalar), 0), vec2(1024 + (tireAngle * rotationScalar), 512), rgbm(1, 1, 1, fadeFactor), ui.ImageFit.Stretch)
-    ui.drawImage(texturePath, vec2(1024 + (tireAngle * rotationScalar), 0), vec2(2048 + (tireAngle * rotationScalar), 512), rgbm(1, 1, 1, fadeFactor), ui.ImageFit.Stretch)
+    drawTireSpans(texturePath, getLUTColor(fadeColorLUT, fadeFactor))
 
     local scrubFactor = math.clamp(math.remap(car.wheels[tireIndex - 1].tyreVirtualKM, 0, 0.01, 0, 1), 0, 1)
     local grainFactor = math.clamp(math.remap(car.wheels[tireIndex - 1].tyreVirtualKM, 0, 1.3, 0, 1), 0, 1) ^ 0.5
 
-    ac.debug("scrubFactor" .. tireIndex - 1, scrubFactor)
-    ac.debug("grainFactor" .. tireIndex - 1, grainFactor)
+    if DEBUG then
+        ac.debug("scrubFactor" .. tireIndex - 1, scrubFactor)
+        ac.debug("grainFactor" .. tireIndex - 1, grainFactor)
+    end
 
-    local colorCenter = rgbm(1, 0, 0.5, scrubFactor)
-    local colorEdge = rgbm(1, 0, 1, 0)
-
-    ui.drawRectFilled(vec2(0, 0.25*512), vec2(1024, 0.75*512), colorCenter)
-    ui.drawRectFilledMultiColor(vec2(0, 0*512), vec2(1024, 0.25*512), colorEdge, colorEdge, colorCenter, colorCenter)
-    ui.drawRectFilledMultiColor(vec2(0, 0.75*512), vec2(1024, 1*512), colorCenter, colorCenter, colorEdge, colorEdge)
+    local colorCenter = getLUTColor(scrubColorLUT, scrubFactor)
+    ui.drawRectFilled(rectCenterMin, rectCenterMax, colorCenter)
+    ui.drawRectFilledMultiColor(rectTopMin, rectTopMax, edgeColor, edgeColor, colorCenter, colorCenter)
+    ui.drawRectFilledMultiColor(rectBottomMin, rectBottomMax, colorCenter, colorCenter, edgeColor, edgeColor)
 
     texturePath = "dirt.dds"
-    local textureMixColor = rgbm(1, 0, 0.2, 0.4 * grainFactor)
+    drawTireSpans(texturePath, getLUTColor(grainColorLUT, grainFactor))
 
-    ui.drawImage(texturePath, vec2(-1024 + (tireAngle * rotationScalar), 0), vec2(0 + (tireAngle * rotationScalar), 512), textureMixColor, ui.ImageFit.Stretch)
-    ui.drawImage(texturePath, vec2(0 + (tireAngle * rotationScalar), 0), vec2(1024 + (tireAngle * rotationScalar), 512), textureMixColor, ui.ImageFit.Stretch)
-    ui.drawImage(texturePath, vec2(1024 + (tireAngle * rotationScalar), 0), vec2(2048 + (tireAngle * rotationScalar), 512), textureMixColor, ui.ImageFit.Stretch)
-
-    ui.endBlurring(vec2(
-        (0.005 * (math.abs(tireSpeed) + 0.001)) ^ 3.5,
-        0
-    ))
-
+    updateBlurVector(tireSpeed)
+    ui.endBlurring(blurVector)
 end
 
 local function rotateTransformAroundLocalPivot(localTransform, pivotLocal, axisLocal, angleRad)
@@ -213,15 +269,17 @@ function script.update(dt)
     local smoothDT = (lastDT * dtSmoothing) + (dt * (1 - dtSmoothing))
 
     antiResetAdder = (antiResetAdder + 1) % 2
-    ac.debug("antiResetAdder", antiResetAdder)
 
     angularAcceleration = updateAngularAcceleration(dt)
-    ac.debug("angularAcceleration.x", angularAcceleration.x)
-    ac.debug("angularAcceleration.y", angularAcceleration.y)
-    ac.debug("angularAcceleration.z", angularAcceleration.z)
-    ac.debug("car.acceleration.x", car.acceleration.x)
-    ac.debug("car.acceleration.y", car.acceleration.y)
-    ac.debug("car.acceleration.z", car.acceleration.z)
+
+    if DEBUG then
+        ac.debug("angularAcceleration.x", angularAcceleration.x)
+        ac.debug("angularAcceleration.y", angularAcceleration.y)
+        ac.debug("angularAcceleration.z", angularAcceleration.z)
+        ac.debug("car.acceleration.x", car.acceleration.x)
+        ac.debug("car.acceleration.y", car.acceleration.y)
+        ac.debug("car.acceleration.z", car.acceleration.z)
+    end
 
     if not ((sim.isPaused) or (sim.isReplayActive and (sim.replayPlaybackRate < 0.01))) then
         if car.extraC then
@@ -241,10 +299,12 @@ function script.update(dt)
     end
 
     if tierodLControl and tierodLTarget and carNode then
-        tierodLControl:setPosition(helpers.getPositionInCarFrame(tierodLTarget, carNode))
+        tierodLPos:set(helpers.getPositionInCarFrame(tierodLTarget, carNode))
+        tierodLControl:setPosition(tierodLPos)
     end
     if tierodRControl and tierodRTarget and carNode then
-        tierodRControl:setPosition(helpers.getPositionInCarFrame(tierodRTarget, carNode))
+        tierodRPos:set(helpers.getPositionInCarFrame(tierodRTarget, carNode))
+        tierodRControl:setPosition(tierodRPos)
     end
 
     for tireIndex, tire in ipairs(tires) do
@@ -276,43 +336,36 @@ function script.update(dt)
         )
         tire.flex:getTransformationRaw():set(flexTransform)
 
-        local flexParentWorld = tire.flex:getParent():getWorldTransformationRaw()
-        local flexPivotWorld = flexParentWorld:transformPoint(tire.flexPivotLocal)
-        render.debugCross(flexPivotWorld, 0.1, rgbm(0, 1, 0, 1))
+        if DEBUG then
+            local flexParentWorld = tire.flex:getParent():getWorldTransformationRaw()
+            local flexPivotWorld = flexParentWorld:transformPoint(tire.flexPivotLocal)
+            render.debugCross(flexPivotWorld, 0.1, rgbm(0, 1, 0, 1))
+        end
 
         -- Update tire canvas and rotation tracking
-        tire.angle = tire.angle + (car.wheels[tireIndex - 1].angularSpeed * dt * (tire.reverseAngle and -1 or 1))
+        local wheel = car.wheels[tireIndex - 1]
+        tire.angle = tire.angle + (wheel.angularSpeed * dt * (tire.reverseAngle and -1 or 1))
         tire.angle = tire.angle - math.floor(tire.angle / (2 * math.pi)) * (2 * math.pi)
+        tire.currentWheelSpeed = wheel.angularSpeed
+        tire.currentSignedAngle = tire.angle * (tireIndex <= 2 and -1 or 1)
+        tire.currentTextureName = tire.textureName or tire.name
         tire.canvas:clear()
-        tire.canvas:update(function()
-            drawTireSurface_Diffuse(
-                car.wheels[tireIndex - 1].angularSpeed,
-                tire.angle * (tireIndex <= 2 and -1 or 1),
-                tire.textureName or tire.name
-            )
-        end)
+        tire.canvas:update(tire.updateDiffuseCallback)
         tire.surface:setMaterialTexture('txDiffuse', tire.canvas)
         tire.canvasNormal:clear()
-        tire.canvasNormal:update(function()
-            drawTireSurface_Normal(
-                car.wheels[tireIndex - 1].angularSpeed,
-                tire.angle * (tireIndex <= 2 and -1 or 1),
-                tire.textureName or tire.name
-            )
-        end)
+        tire.canvasNormal:update(tire.updateNormalCallback)
         tire.surface:setMaterialTexture('txNormal', tire.canvasNormal)
-        tire.canvasMaps:clear()
-        tire.canvasMaps:update(function()
-            drawTireSurface_Maps(
-                car.wheels[tireIndex - 1].angularSpeed,
-                tire.angle * (tireIndex <= 2 and -1 or 1),
-                tire.textureName or tire.name,
-                tireIndex
-            )
-        end)
-        tire.surface:setMaterialTexture('txMaps', tire.canvasMaps)
+        tire.mapsUpdateClock = tire.mapsUpdateClock + dt
+        if tire.mapsUpdateClock >= mapsUpdateInterval then
+            tire.mapsUpdateClock = tire.mapsUpdateClock - mapsUpdateInterval
+            tire.canvasMaps:clear()
+            tire.canvasMaps:update(tire.updateMapsCallback)
+            tire.surface:setMaterialTexture('txMaps', tire.canvasMaps)
+        end
 
-        ac.debug("tire angle " .. tireIndex, tire.angle)
+        if DEBUG then
+            ac.debug("tire angle " .. tireIndex, tire.angle)
+        end
     end
 
     lastDT = dt

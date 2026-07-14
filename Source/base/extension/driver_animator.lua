@@ -381,11 +381,13 @@ function DriverAnimator:updateStates(dt)
             end
         end
 
-        ac.debug(stateName .. ".active", state.active)
-        ac.debug(stateName .. ".progress", state.progress)
-        ac.debug(stateName .. ".held", state.held)
-        ac.debug(stateName .. ".rewinding", state.rewinding)
-        ac.debug(stateName .. ".timer", state.timer)
+        if DEBUG then
+            ac.debug(stateName .. ".active", state.active)
+            ac.debug(stateName .. ".progress", state.progress)
+            ac.debug(stateName .. ".held", state.held)
+            ac.debug(stateName .. ".rewinding", state.rewinding)
+            ac.debug(stateName .. ".timer", state.timer)
+        end
     end
 end
 
@@ -427,6 +429,63 @@ local IK_ROT_INIT_UP = vec3(1, 0, 0):normalize()
 local IK_ROT_RIGHT = IK_ROT_INIT_UP:cross(IK_ROT_LOOK):normalize()
 local IK_ROT_UP = IK_ROT_LOOK:cross(IK_ROT_RIGHT):normalize()
 local IK_AXIS_Y = vec3(0, 1, 0)
+local IK_HAND_R_FORWARD = vec3()
+local IK_HAND_L_FORWARD = vec3()
+local IK_HAND_L_UP = vec3()
+local AXIS_X = vec3(1, 0, 0)
+local AXIS_Y = vec3(0, 1, 0)
+local AXIS_Z = vec3(0, 0, 1)
+local FINGER_NAMES = { "thumb", "index", "middle", "ring", "pinkie" }
+local centerPosVec = vec3()
+local hipsForwardVec = vec3()
+local hipsUpVec = vec3()
+local footLForwardVec = vec3()
+local footLUpVec = vec3()
+local footRForwardVec = vec3()
+local footRUpVec = vec3()
+local neckForwardVec = vec3()
+local headForwardVec = vec3()
+local headUpVec = vec3()
+local shinLForwardVec = vec3()
+local shinRForwardVec = vec3()
+local legLForwardVec = vec3()
+local legLUpVec = vec3()
+local legRForwardVec = vec3()
+local legRUpVec = vec3()
+local fingerThumbLForwardVec = vec3()
+local fingerThumbRForwardVec = vec3()
+local fingerIdleLUpVec = vec3()
+local fingerIdleRUpVec = vec3()
+local handUpThumbForwardVec = vec3()
+local handUpFingerUpVec = vec3()
+local handUpTargetRotations = {
+    clavicle = {
+        forward = vec3(0.3, 0, 0),
+        up = vec3(0, 0.3, 0)
+    },
+    upper = {
+        forward = vec3(),
+        up = vec3()
+    },
+    forearm = {
+        forward = vec3(),
+        up = vec3()
+    },
+    forearmEnd = {
+        forward = vec3(0, 0, 0),
+        up = vec3(0, 0, 0)
+    },
+    hand = {
+        forward = vec3(),
+        up = vec3(0, 0, 0)
+    }
+}
+local handUpBlendIntermediateOffsets = {
+    upper = {
+        forward = vec3(0, 0.5, 0),
+        up = vec3(0, 0, 0)
+    }
+}
 
 -- Persistent IK scratch and parameter tables, reused every frame to avoid allocations
 local ikRelPos = vec3()
@@ -501,13 +560,16 @@ local function driverIK(self, dt)
     ikSolver_fabrik(ikParamsL)
 
     driverArm_R_forearmEnd:setRotation(IK_AXIS_Y, math.rad(20 + helpers.mapRange(car.steer, 0, 90, 0, -95, true) + helpers.mapRange(car.steer, -90, 0, 60, 0, true)))
-    driverArm_R_hand:setOrientation(vec3(0, -0.3 + (math.clamp(car.steer, 0, 90) * 0.005), 1))
+    IK_HAND_R_FORWARD:set(0, -0.3 + (math.clamp(car.steer, 0, 90) * 0.005), 1)
+    driverArm_R_hand:setOrientation(IK_HAND_R_FORWARD)
 
     driverArm_L_forearmEnd:setRotation(IK_AXIS_Y, math.rad(20 + helpers.mapRange(car.steer, 0, 90, 0, -120, true) + helpers.mapRange(car.steer, -90, 0, 60, 0, true)))
     local hand_L_x = -0.3 + helpers.mapRange(car.steer, -90, 0, -0.4, 0, true)
     local hand_L_y = -0.4 + helpers.mapRange(car.steer, 0, 90, 0, 0.6, true) + helpers.mapRange(car.steer, -90, 0, 1, 0, true)
     local hand_L_z = 1
-    driverArm_L_hand:setOrientation(vec3(hand_L_x, hand_L_y, hand_L_z), vec3(0 + helpers.mapRange(car.steer, -90, 0, -0.5, 0, true), 1, 0))
+    IK_HAND_L_FORWARD:set(hand_L_x, hand_L_y, hand_L_z)
+    IK_HAND_L_UP:set(helpers.mapRange(car.steer, -90, 0, -0.5, 0, true), 1, 0)
+    driverArm_L_hand:setOrientation(IK_HAND_L_FORWARD, IK_HAND_L_UP)
 end
 
 function DriverAnimator:update(dt, antiResetAdder)
@@ -536,25 +598,27 @@ function DriverAnimator:update(dt, antiResetAdder)
     local neckTiltLatAnimPos = self.physicsObjects.neckTiltLat.position
     local neckTiltLongAnimPos = self.physicsObjects.neckTiltLong.position
 
-    ac.debug("bodyLat position", self.physicsObjects.bodyLat.position)
-    ac.debug("bodyLat force", self.physicsObjects.bodyLat.force)
-    ac.debug("bodyVert position", self.physicsObjects.bodyVert.position)
-    ac.debug("bodyVert force", self.physicsObjects.bodyVert.force)
-    ac.debug("bodyLong position", self.physicsObjects.bodyLong.position)
-    ac.debug("bodyLong force", self.physicsObjects.bodyLong.force)
-    ac.debug("legL position", self.physicsObjects.legL.position)
-    ac.debug("legL force", self.physicsObjects.legL.force)
-    ac.debug("legR position", self.physicsObjects.legR.position)
-    ac.debug("legR force", self.physicsObjects.legR.force)
-    ac.debug("neckTurn position", self.physicsObjects.neckTurn.position)
-    ac.debug("neckTurn force", self.physicsObjects.neckTurn.force)
-    ac.debug("neckTiltLat position", self.physicsObjects.neckTiltLat.position)
-    ac.debug("neckTiltLat force", self.physicsObjects.neckTiltLat.force)
-    ac.debug("neckTiltLong position", self.physicsObjects.neckTiltLong.position)
-    ac.debug("neckTiltLong force", self.physicsObjects.neckTiltLong.force)
-    ac.debug("neckTurnAnimPos", neckTurnAnimPos)
-    ac.debug("neckTiltLatAnimPos", neckTiltLatAnimPos)
-    ac.debug("neckTiltLongAnimPos", neckTiltLongAnimPos)
+    if DEBUG then
+        ac.debug("bodyLat position", self.physicsObjects.bodyLat.position)
+        ac.debug("bodyLat force", self.physicsObjects.bodyLat.force)
+        ac.debug("bodyVert position", self.physicsObjects.bodyVert.position)
+        ac.debug("bodyVert force", self.physicsObjects.bodyVert.force)
+        ac.debug("bodyLong position", self.physicsObjects.bodyLong.position)
+        ac.debug("bodyLong force", self.physicsObjects.bodyLong.force)
+        ac.debug("legL position", self.physicsObjects.legL.position)
+        ac.debug("legL force", self.physicsObjects.legL.force)
+        ac.debug("legR position", self.physicsObjects.legR.position)
+        ac.debug("legR force", self.physicsObjects.legR.force)
+        ac.debug("neckTurn position", self.physicsObjects.neckTurn.position)
+        ac.debug("neckTurn force", self.physicsObjects.neckTurn.force)
+        ac.debug("neckTiltLat position", self.physicsObjects.neckTiltLat.position)
+        ac.debug("neckTiltLat force", self.physicsObjects.neckTiltLat.force)
+        ac.debug("neckTiltLong position", self.physicsObjects.neckTiltLong.position)
+        ac.debug("neckTiltLong force", self.physicsObjects.neckTiltLong.force)
+        ac.debug("neckTurnAnimPos", neckTurnAnimPos)
+        ac.debug("neckTiltLatAnimPos", neckTiltLatAnimPos)
+        ac.debug("neckTiltLongAnimPos", neckTiltLongAnimPos)
+    end
 
     self.physicsObjects.bodyLat:step(-bodyLatForce, dt)
     self.physicsObjects.bodyVert:step(-bodyVertForce, dt)
@@ -562,7 +626,8 @@ function DriverAnimator:update(dt, antiResetAdder)
     local bodyLatPos = self.physicsObjects.bodyLat.position - 0.5
     local bodyVertPos = self.physicsObjects.bodyVert.position - 0.5
     local bodyLongPos = self.physicsObjects.bodyLong.position - 0.5
-    driverCenter:setPosition(vec3(0.045 + bodyLatPos * 0.05, 0.09 + bodyVertPos * 0.03, -0.16 + bodyLongPos * 0.02))
+    centerPosVec:set(0.045 + bodyLatPos * 0.05, 0.09 + bodyVertPos * 0.03, -0.16 + bodyLongPos * 0.02)
+    driverCenter:setPosition(centerPosVec)
 
     self.physicsObjects.bodySteerLeanLong.center = math.clamp(math.remap(self.states.leanForward.progress, 0, 1, 0.1, 2.5) + ((math.sin(math.rad(math.abs(car.steer)))^3) * 0.55), 0, 3)
 
@@ -575,51 +640,91 @@ function DriverAnimator:update(dt, antiResetAdder)
     local hipsUpY = 0
     local hipsUpZ = 1
 
-    driverHips:setOrientation(vec3(hipsOrientX, hipsOrientY, hipsOrientZ), vec3(hipsUpX, hipsUpY, hipsUpZ))
+    hipsForwardVec:set(hipsOrientX, hipsOrientY, hipsOrientZ)
+    hipsUpVec:set(hipsUpX, hipsUpY, hipsUpZ)
+    driverHips:setOrientation(hipsForwardVec, hipsUpVec)
 
     -- Update feet
+    footLForwardVec:set(self.nodes.foot.L.forward):addScaled(AXIS_Z, car.brake * 0.15)
+    footLUpVec:set(self.nodes.foot.L.up)
+        :addScaled(AXIS_X, legLPos)
+        :addScaled(AXIS_Y, legLPos * 0.5)
+        :addScaled(AXIS_Z, legLPos * -2)
     self.nodes.foot.L.node:setOrientation(
-        self.nodes.foot.L.forward + vec3(0, 0, (car.brake * 0.15)),
-        self.nodes.foot.L.up + vec3(legLPos * 1, legLPos * 0.5, legLPos * -2)
+        footLForwardVec,
+        footLUpVec
     )
+    footRForwardVec:set(self.nodes.foot.R.forward):addScaled(AXIS_Z, car.gas * 0.3)
+    footRUpVec:set(self.nodes.foot.R.up):addScaled(AXIS_X, legRPos)
     self.nodes.foot.R.node:setOrientation(
-        self.nodes.foot.R.forward + vec3(0, 0, (car.gas * 0.3)),
-        self.nodes.foot.R.up + vec3(legRPos * 1, 0, 0)
+        footRForwardVec,
+        footRUpVec
     )
 
     -- Update neck
+    neckForwardVec:set(self.nodes.neck.forward)
+        :addScaled(AXIS_Y, self.states.leanForward.progress * 0.3)
+        :addScaled(AXIS_Z, bodyLongPos * 2)
     self.nodes.neck.node:setOrientation(
-        self.nodes.neck.forward + vec3(0, 0 + (self.states.leanForward.progress * 0.3), bodyLongPos * 2),
-        self.nodes.neck.up + vec3(0, 0, 0)
+        neckForwardVec,
+        self.nodes.neck.up
     )
 
+    headForwardVec:set(self.nodes.head.forward)
+        :addScaled(AXIS_X, neckTurnAnimPos)
+        :addScaled(AXIS_Y, neckTiltLongAnimPos * -2)
+    headUpVec:set(self.nodes.head.up)
+        :addScaled(AXIS_X, neckTiltLatAnimPos)
+        :addScaled(AXIS_Z, neckTiltLongAnimPos * -2)
     self.nodes.head.node:setOrientation(
-        self.nodes.head.forward + vec3(neckTurnAnimPos, neckTiltLongAnimPos * -2, 0),
-        self.nodes.head.up + vec3(neckTiltLatAnimPos, 0, neckTiltLongAnimPos * -2)
+        headForwardVec,
+        headUpVec
     )
 
     -- Update shins
+    shinLForwardVec:set(
+        self.nodes.shin.L.forward.x + (legLPos * 0.2),
+        self.nodes.shin.L.forward.y - (legLPos * 0.2),
+        self.nodes.shin.L.forward.z + (car.brake * 0.05) + (self.physicsObjects.bodyVert.position * -0.2)
+    )
     self.nodes.shin.L.node:setOrientation(
-        self.nodes.shin.L.forward + vec3(0 + (legLPos * 0.2), 0 - (legLPos * 0.2), (car.brake * 0.05) + ((self.physicsObjects.bodyVert.position) * -0.2)),
+        shinLForwardVec,
         self.nodes.shin.L.up
     )
+    shinRForwardVec:set(
+        self.nodes.shin.R.forward.x + (legRPos * 0.2),
+        self.nodes.shin.R.forward.y - (legRPos * 0.2),
+        self.nodes.shin.R.forward.z + (car.gas * 0.125) + (self.physicsObjects.bodyVert.position * -0.2)
+    )
     self.nodes.shin.R.node:setOrientation(
-        self.nodes.shin.R.forward + vec3(0 + (legRPos * 0.2), 0 - (legRPos * 0.2), (car.gas * 0.125) + ((self.physicsObjects.bodyVert.position) * -0.2)),
+        shinRForwardVec,
         self.nodes.shin.R.up
     )
 
     -- Update legs
+    legLForwardVec:set(self.nodes.leg.L.forward)
+        :addScaled(AXIS_X, legLPos * 0.15)
+        :addScaled(AXIS_Z, car.brake * 0.025)
+    legLUpVec:set(self.nodes.leg.L.up)
+        :addScaled(AXIS_X, legLPos * -0.25)
+        :addScaled(AXIS_Y, legLPos * -0.6)
     self.nodes.leg.L.node:setOrientation(
-        self.nodes.leg.L.forward + vec3(0 + (legLPos * 0.15), 0, (car.brake * 0.025)),
-        self.nodes.leg.L.up + vec3(legLPos * -0.25, legLPos * -0.6, 0)
+        legLForwardVec,
+        legLUpVec
     )
+    legRForwardVec:set(self.nodes.leg.R.forward)
+        :addScaled(AXIS_X, legRPos * 0.15)
+        :addScaled(AXIS_Z, car.gas * 0.05)
+    legRUpVec:set(self.nodes.leg.R.up)
+        :addScaled(AXIS_X, legRPos * -0.3)
+        :addScaled(AXIS_Y, legRPos * 0.6)
     self.nodes.leg.R.node:setOrientation(
-        self.nodes.leg.R.forward + vec3(0 + (legRPos * 0.15), 0, (car.gas * 0.05)),
-        self.nodes.leg.R.up + vec3(legRPos * -0.3, legRPos * 0.6, 0)
+        legRForwardVec,
+        legRUpVec
     )
 
     -- Update finger idle animations
-    for i, fingerName in ipairs({ "thumb", "index", "middle", "ring", "pinkie" }) do
+    for i, fingerName in ipairs(FINGER_NAMES) do
         local timeOffset = (i - 1) * -80
         local steeringScaleOut = helpers.mapRange(math.abs(car.steer), 0, 60, 1.5, 0, true)
         local wigglePerlinLeft = math.perlin((sim.time + timeOffset) * 0.0004, 2) ^ 5
@@ -634,24 +739,32 @@ function DriverAnimator:update(dt, antiResetAdder)
             local thumbScalar = 0.5
 
             if fingerName == "thumb" then
+                fingerThumbLForwardVec:set(self.nodes.fingers.L[fingerName]["node" .. j].forward)
+                    :addScaled(AXIS_Y, fingerWiggleLeft * -wiggleAmount * thumbScalar)
                 self.nodes.fingers.L[fingerName]["node" .. j].node:setOrientation(
-                    self.nodes.fingers.L[fingerName]["node" .. j].forward +
-                    vec3(0, fingerWiggleLeft * -wiggleAmount * thumbScalar, 0),
+                    fingerThumbLForwardVec,
                     self.nodes.fingers.L[fingerName]["node" .. j].up
                 )
+                fingerThumbRForwardVec:set(self.nodes.fingers.R[fingerName]["node" .. j].forward)
+                    :addScaled(AXIS_Y, fingerWiggleRight * -wiggleAmount * thumbScalar)
                 self.nodes.fingers.R[fingerName]["node" .. j].node:setOrientation(
-                    self.nodes.fingers.R[fingerName]["node" .. j].forward +
-                    vec3(0, fingerWiggleRight * -wiggleAmount * thumbScalar, 0),
+                    fingerThumbRForwardVec,
                     self.nodes.fingers.R[fingerName]["node" .. j].up
                 )
             else
+                fingerIdleLUpVec:set(self.nodes.fingers.L[fingerName]["node" .. j].up)
+                    :addScaled(AXIS_X, fingerWiggleLeft * wiggleAmount)
+                    :addScaled(AXIS_Y, steerSplayLeft * (i - 2) * 0.5)
                 self.nodes.fingers.L[fingerName]["node" .. j].node:setOrientation(
                     self.nodes.fingers.L[fingerName]["node" .. j].forward,
-                    self.nodes.fingers.L[fingerName]["node" .. j].up + vec3(fingerWiggleLeft * wiggleAmount, steerSplayLeft * (i - 2) * 0.5, 0)
+                    fingerIdleLUpVec
                 )
+                fingerIdleRUpVec:set(self.nodes.fingers.R[fingerName]["node" .. j].up)
+                    :addScaled(AXIS_X, fingerWiggleRight * -wiggleAmount)
+                    :addScaled(AXIS_Y, steerSplayRight * (i - 2) * 0.3)
                 self.nodes.fingers.R[fingerName]["node" .. j].node:setOrientation(
                     self.nodes.fingers.R[fingerName]["node" .. j].forward,
-                    self.nodes.fingers.R[fingerName]["node" .. j].up + vec3(fingerWiggleRight * -wiggleAmount, steerSplayRight * (i - 2) * 0.3, 0)
+                    fingerIdleRUpVec
                 )
             end
         end
@@ -677,42 +790,20 @@ function DriverAnimator:update(dt, antiResetAdder)
         local displacementY = self.physicsObjects.handPhysics.y.position
         local displacementZ = self.physicsObjects.handPhysics.z.position
 
-        ac.debug("displacementX", displacementX)
-        ac.debug("displacementY", displacementY)
-        ac.debug("displacementZ", displacementZ)
+        if DEBUG then
+            ac.debug("displacementX", displacementX)
+            ac.debug("displacementY", displacementY)
+            ac.debug("displacementZ", displacementZ)
+        end
 
-        local targetRotations = {
-            clavicle = {
-                forward = vec3(0.3, 0, 0),
-                up = vec3(0, 0.3, 0)
-            },
-            upper = {
-                forward = vec3(0, -0.5 + (displacementX * 0.5) - (displacementY * 0.5), 0.5 + (displacementY * 0.2)),
-                up = vec3(1 - (displacementZ * 0.5), -0.5 + displacementZ, 0)
-            },
-            forearm = {
-                forward = vec3(1 + (displacementX * 0.5) + (displacementY * 0.5), 0.5 - (displacementZ * 0.5), -1),
-                up = vec3(0, 1 - (displacementZ * 2), 0)
-            },
-            forearmEnd = {
-                forward = vec3(0, 0, 0),
-                up = vec3(0, 0, 0)
-            },
-            hand = {
-                forward = vec3(-0.5 + (displacementZ * 1), 0.5 - (displacementZ * 0.5), 0),
-                up = vec3(0, 0, 0)
-            }
-        }
-
-        local blendIntermediateOffsets = {
-            upper = {
-                forward = vec3(0, 0.5, 0),
-                up = vec3(0, 0, 0)
-            }
-        }
+        handUpTargetRotations.upper.forward:set(0, -0.5 + (displacementX * 0.5) - (displacementY * 0.5), 0.5 + (displacementY * 0.2))
+        handUpTargetRotations.upper.up:set(1 - (displacementZ * 0.5), -0.5 + displacementZ, 0)
+        handUpTargetRotations.forearm.forward:set(1 + (displacementX * 0.5) + (displacementY * 0.5), 0.5 - (displacementZ * 0.5), -1)
+        handUpTargetRotations.forearm.up:set(0, 1 - (displacementZ * 2), 0)
+        handUpTargetRotations.hand.forward:set(-0.5 + displacementZ, 0.5 - (displacementZ * 0.5), 0)
 
         -- Apply blended rotations based on animation progress
-        for partName, partTarget in pairs(targetRotations) do
+        for partName, partTarget in pairs(handUpTargetRotations) do
             local node = self.nodes.arm.L[partName]
             local progress = self.states.handUp.progress
             local transitionScalar = helpers.mapRange(math.abs(car.steer), 0, 20, 0.5, 1, true)
@@ -725,12 +816,12 @@ function DriverAnimator:update(dt, antiResetAdder)
             if progress <= transitionPoint then
                 -- First phase: Blend from current position to base position
                 local initialBlend = helpers.mapRange(progress, 0, transitionPoint, 0, 1)
-                if blendIntermediateOffsets[partName] then
+                if handUpBlendIntermediateOffsets[partName] then
                     blendedForward = currentForward +
-                        (node.baseForward - currentForward + (blendIntermediateOffsets[partName].forward * transitionScalar)) *
+                        (node.baseForward - currentForward + (handUpBlendIntermediateOffsets[partName].forward * transitionScalar)) *
                         initialBlend
                     blendedUp = currentUp +
-                        (node.baseUp - currentUp + (blendIntermediateOffsets[partName].up * transitionScalar)) *
+                        (node.baseUp - currentUp + (handUpBlendIntermediateOffsets[partName].up * transitionScalar)) *
                         initialBlend
                 else
                     blendedForward = currentForward + (node.baseForward - currentForward) * initialBlend
@@ -739,10 +830,10 @@ function DriverAnimator:update(dt, antiResetAdder)
             else
                 -- Second phase: Blend from intermediate/base position to raised position
                 local raisedBlend = helpers.mapRange(progress, transitionPoint, 1, 0, 1)
-                if blendIntermediateOffsets[partName] then
+                if handUpBlendIntermediateOffsets[partName] then
                     local intermediateForward = node.baseForward +
-                        (blendIntermediateOffsets[partName].forward * transitionScalar)
-                    local intermediateUp = node.baseUp + (blendIntermediateOffsets[partName].up * transitionScalar)
+                        (handUpBlendIntermediateOffsets[partName].forward * transitionScalar)
+                    local intermediateUp = node.baseUp + (handUpBlendIntermediateOffsets[partName].up * transitionScalar)
                     blendedForward = intermediateForward +
                         ((node.baseForward + partTarget.forward - intermediateForward) * raisedBlend)
                     blendedUp = intermediateUp + ((node.baseUp + partTarget.up - intermediateUp) * raisedBlend)
@@ -760,16 +851,21 @@ function DriverAnimator:update(dt, antiResetAdder)
                 for fingerName, finger in pairs(fingers) do
                     for j, nodeData in pairs(finger) do
                         if fingerName == "thumb" then
+                            handUpThumbForwardVec:set(nodeData.forward):addScaled(AXIS_Y, 0.3 * self.states.handUp.progress)
                             nodeData.node:setOrientation(
-                                nodeData.forward + (vec3(0, 0.3, 0) * self.states.handUp.progress),
+                                handUpThumbForwardVec,
                                 nodeData.up
                             )
                         else
+                            handUpFingerUpVec:set(nodeData.up):addScaled(
+                                AXIS_X,
+                                -1 * (fingerName == "index" and 0.7 or
+                                    fingerName == "middle" and 0.8 or
+                                    fingerName == "ring" and 0.85 or 0.95) * self.states.handUp.progress
+                            )
                             nodeData.node:setOrientation(
                                 nodeData.forward,
-                                nodeData.up + (vec3(-1 * (fingerName == "index" and 0.7 or
-                                    fingerName == "middle" and 0.8 or
-                                    fingerName == "ring" and 0.85 or 0.95), 0, 0) * self.states.handUp.progress)
+                                handUpFingerUpVec
                             )
                         end
                     end

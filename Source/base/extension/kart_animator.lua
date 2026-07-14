@@ -3,6 +3,19 @@ local Physics = require("physics_object")
 local NodeAnimator = require("node_animator")
 
 local KartAnimator = class("KartAnimator")
+local axisX = vec3(1, 0, 0)
+local axisY = vec3(0, 1, 0)
+local axisZ = vec3(0, 0, 1)
+local axisNegX = vec3(-1, 0, 0)
+local axisZero = vec3(0, 0, 0)
+local brakeDiscPosVec = vec3()
+local brakePad1PosVec = vec3()
+local brakePad2PosVec = vec3()
+local brakeLeverUpVec = vec3()
+local pedalBrakeForwardVec = vec3()
+local pedalGasForwardVec = vec3()
+local tierodLPos = vec3()
+local tierodRPos = vec3()
 
 function KartAnimator:initialize()
     -- Physics configuration
@@ -208,13 +221,13 @@ function KartAnimator:update(dt, angularAcceleration)
     local forceNassau = -car.acceleration.x
     local forceNosecone = car.acceleration.y
 
-    self.physics.sidepodRight:update(forceSidepodRight, vec3(1, 0, 0), vec3(0, 0, 0), dt)
-    self.physics.sidepodLeft:update(forceSidepodLeft, vec3(1, 0, 0), vec3(0, 0, 0), dt)
-    self.physics.bumperRear:update(forceBumperRear, vec3(0, 1, 0), vec3(0, 0, 0), dt)
-    self.physics.bumperRearAxial:update(forceBumperRearAxial, vec3(1, 0, 0), vec3(0, 0, 0), dt)
-    self.physics.bumperRearVertical:update(forceBumperRearVertical, vec3(0, 0, 0), vec3(0, 0, 1), dt)
-    self.physics.nassau:update(forceNassau, vec3(1, 0, 0), vec3(0, 0, 0), dt)
-    self.physics.nosecone:update(forceNosecone, vec3(0, 0, 1), vec3(0, 0, 0), dt)
+    self.physics.sidepodRight:update(forceSidepodRight, axisX, axisZero, dt)
+    self.physics.sidepodLeft:update(forceSidepodLeft, axisX, axisZero, dt)
+    self.physics.bumperRear:update(forceBumperRear, axisY, axisZero, dt)
+    self.physics.bumperRearAxial:update(forceBumperRearAxial, axisX, axisZero, dt)
+    self.physics.bumperRearVertical:update(forceBumperRearVertical, axisZero, axisZ, dt)
+    self.physics.nassau:update(forceNassau, axisX, axisZero, dt)
+    self.physics.nosecone:update(forceNosecone, axisZ, axisZero, dt)
 
     self.physics.brakeDisc.posMax = helpers.mapRange(car.brake, 0, 0.2, 1, 0.1, true)
     self.physics.brakeDisc.posMin = helpers.mapRange(car.brake, 0, 0.2, -1, -0.1, true)
@@ -222,61 +235,75 @@ function KartAnimator:update(dt, angularAcceleration)
     local brakeDiscAnimPos = self.physics.brakeDisc.position
 
     if self.nodes.brakeSystem.disc.node then
+        brakeDiscPosVec:set(self.nodes.brakeSystem.disc.position):addScaled(
+            axisZ,
+            brakeDiscAnimPos * helpers.mapRange(car.brake, 0, 0.2, 1, 0, true) * 0.0005
+        )
         self.nodes.brakeSystem.disc.node:setPosition(
-            self.nodes.brakeSystem.disc.position +
-            vec3(0, 0, brakeDiscAnimPos * helpers.mapRange(car.brake, 0, 0.2, 1, 0, true) * 0.0005)
+            brakeDiscPosVec
         )
     end
     if self.nodes.brakeSystem.pad1.node then
+        brakePad1PosVec:set(self.nodes.brakeSystem.pad1.position):addScaled(
+            axisX,
+            helpers.mapRange(car.brake, 0, 0.2, 0, -0.001, true)
+        )
         self.nodes.brakeSystem.pad1.node:setPosition(
-            self.nodes.brakeSystem.pad1.position +
-            vec3(helpers.mapRange(car.brake, 0, 0.2, 0, -0.001, true), 0, 0)
+            brakePad1PosVec
         )
     end
     if self.nodes.brakeSystem.pad2.node then
+        brakePad2PosVec:set(self.nodes.brakeSystem.pad2.position):addScaled(
+            axisX,
+            helpers.mapRange(car.brake, 0, 0.2, 0, 0.001, true)
+        )
         self.nodes.brakeSystem.pad2.node:setPosition(
-            self.nodes.brakeSystem.pad2.position +
-            vec3(helpers.mapRange(car.brake, 0, 0.2, 0, 0.001, true), 0, 0)
+            brakePad2PosVec
         )
     end
 
     -- Update brake lever
     if self.nodes.brakeSystem.lever.node then
+        brakeLeverUpVec:set(self.nodes.brakeSystem.lever.up):addScaled(axisY, car.brake * 0.47)
         self.nodes.brakeSystem.lever.node:setOrientation(
             self.nodes.brakeSystem.lever.forward,
-            self.nodes.brakeSystem.lever.up + vec3(0, car.brake * 0.47, 0)
+            brakeLeverUpVec
         )
     end
 
     -- Update steering tierods
     if self.nodes.steering.tierodLTarget.node and self.nodes.steering.tierodLControl.node then
+        tierodLPos:set(helpers.getPositionInCarFrame(self.nodes.steering.tierodLTarget.node, self.nodes.steering.carNode.node))
         self.nodes.steering.tierodLControl.node:setPosition(
-            helpers.getPositionInCarFrame(self.nodes.steering.tierodLTarget.node, self.nodes.steering.carNode.node)
+            tierodLPos
         )
     end
     if self.nodes.steering.tierodRTarget.node and self.nodes.steering.tierodRControl.node then
+        tierodRPos:set(helpers.getPositionInCarFrame(self.nodes.steering.tierodRTarget.node, self.nodes.steering.carNode.node))
         self.nodes.steering.tierodRControl.node:setPosition(
-            helpers.getPositionInCarFrame(self.nodes.steering.tierodRTarget.node, self.nodes.steering.carNode.node)
+            tierodRPos
         )
     end
 
     -- Update pedals with converted forces
     if self.nodes.pedals.brake.node then
+        pedalBrakeForwardVec:set(self.nodes.pedals.brake.forward):addScaled(axisZ, car.brake * 0.2)
         self.nodes.pedals.brake.node:setOrientation(
-            self.nodes.pedals.brake.forward + vec3(0, 0, car.brake * 0.2),
+            pedalBrakeForwardVec,
             self.nodes.pedals.brake.up
         )
     end
     if self.nodes.pedals.gas.node then
+        pedalGasForwardVec:set(self.nodes.pedals.gas.forward):addScaled(axisZ, car.gas * 0.4)
         self.nodes.pedals.gas.node:setOrientation(
-            self.nodes.pedals.gas.forward + vec3(0, 0, car.gas * 0.4),
+            pedalGasForwardVec,
             self.nodes.pedals.gas.up
         )
     end
 
     -- Rotate rear axle
     if self.nodes.rearAxle.axleNode.node then
-        self.nodes.rearAxle.axleNode.node:rotate(vec3(-1, 0, 0), car.wheels[3].angularSpeed * dt)
+        self.nodes.rearAxle.axleNode.node:rotate(axisNegX, car.wheels[3].angularSpeed * dt)
     end
 end
 
