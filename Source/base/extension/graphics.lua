@@ -4,15 +4,8 @@
 local helpers = require("helpers")
 local cphys = ac.getCarPhysics(car.index) or {}
 
---local sharedData = ac.connect({
---    ac.StructItem.key('modkart_c2_shared_' .. car.index),
---    setupWheel = ac.StructItem.int8(),
---}, true, ac.SharedNamespace.CarDisplay)
-
-
 local previousAngularVelocity = vec3(0, 0, 0)
 local angularAcceleration = vec3(0, 0, 0)
-
 
 local function updateAngularAcceleration(dt)
     local currentAngularVelocity = vec3(car.angularVelocity.x, car.angularVelocity.y, car.angularVelocity.z)
@@ -20,37 +13,11 @@ local function updateAngularAcceleration(dt)
     return helpers.calculateAngularAcceleration(currentAngularVelocity, previousAngularVelocity, dt)
 end
 
-
-local FrameRateChecker = class("FrameRateChecker")
-function FrameRateChecker:initialize()
-    self.sampleCount = 0
-    self.sampleSum = 0
-    self.sampleLimit = 10  -- Number of frames to average
-    self.threshold = 1/40  -- if frametime is less than this threshold, isActive is set to false
-    self.isActive = true
-end
-
-
-function FrameRateChecker:update(dt)
-    self.sampleSum = self.sampleSum + dt
-    self.sampleCount = self.sampleCount + 1
-
-    if self.sampleCount >= self.sampleLimit then
-        local averageDt = self.sampleSum / self.sampleCount
-        self.isActive = averageDt < self.threshold
-        self.sampleCount = 0
-        self.sampleSum = 0
-    end
-end
-
-
 local function findNode(name)
     local ref = ac.findNodes(name)
     return not ref:empty() and ref or nil
 end
 
-
-local frameRateChecker = FrameRateChecker()
 local DriverAnimator = require("driver_animator")
 local KartAnimator = require("kart_animator")
 local driverAnimator = DriverAnimator()
@@ -248,7 +215,6 @@ function script.update(dt)
     antiResetAdder = (antiResetAdder + 1) % 2
     ac.debug("antiResetAdder", antiResetAdder)
 
-    frameRateChecker:update(dt)
     angularAcceleration = updateAngularAcceleration(dt)
     ac.debug("angularAcceleration.x", angularAcceleration.x)
     ac.debug("angularAcceleration.y", angularAcceleration.y)
@@ -257,7 +223,7 @@ function script.update(dt)
     ac.debug("car.acceleration.y", car.acceleration.y)
     ac.debug("car.acceleration.z", car.acceleration.z)
 
-    if frameRateChecker.isActive and not ((sim.isPaused) or (sim.isReplayActive and (sim.replayPlaybackRate < 0.01))) then
+    if not ((sim.isPaused) or (sim.isReplayActive and (sim.replayPlaybackRate < 0.01))) then
         if car.extraC then
             driverAnimator:setState("handUp", true, true)
         else
